@@ -1,28 +1,40 @@
 import joblib
+import logging
 from datetime import datetime as dt
+import pandas as pd
+
 from src.prepare_data import (
     prepare_gas_demand_actuals,
     prepare_electricity_features,
 )
-from src.train import train
+from src.train import train_glm_63
 from src.evaluate import evaluate_models
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(format="%(asctime)s %(levelname)s: %(message)s", level=logging.INFO)
 
 FORMAT = "%Y%m%d_%H%M%S"
 
-FEATURES = {"TED":"data/elexon_ted_forecast_20221125_112613.csv", 
-"WIND":"data/elexon_wind_forecast_20221125_112621.csv", "ACTUAL_D_SOFAR_ALL_BUT_WIND_GT":"data/elexon_electricity_actuals_20221122_221240.csv"}
-ACTUALS = {"GAS": "data/gas_actuals_20221118_214136.csv"}
+FEATURES = {
+    "TED": "data/elexon_ted_forecast_sample_data.csv",
+    "WIND": "data/elexon_wind_forecast_sample_data.csv",
+    "ACTUAL_D_SOFAR_ALL_BUT_WIND_GT": "data/elexon_electricity_actuals_sample_data.csv",
+}
+ACTUALS = {"GAS": "data/gas_actuals_sample_data.csv"}
 
+logger.info("Preprocessing actual gas demand")
 gas_demand_actuals = prepare_gas_demand_actuals(ACTUALS["GAS"])
+ps_demand_actuals = gas_demand_actuals[["PS"]]
 
+logger.info("Preparing features")
 electricity_features = prepare_electricity_features(FEATURES)
 
-ps_model, ps_cv_predictions = train(gas_demand_actuals[["PS"]], electricity_features)
-joblib.dump(ps_model, f"data/ps_model_{dt.now().strftime(format=FORMAT)}.joblib")
-
-model_performance = evaluate_models(
-    ps_cv_predictions, gas_demand_actuals
+ps_63_model, ps_63_cv_predictions = train_glm_63(
+    ps_demand_actuals, electricity_features
 )
+joblib.dump(ps_63_model, f"data/ps_model_{dt.now().strftime(format=FORMAT)}.joblib")
+
+model_performance = evaluate_models(ps_63_cv_predictions.to_frame(), ps_demand_actuals)
 model_performance.to_csv(
     f"data/model_performance_{dt.now().strftime(format=FORMAT)}.csv", index=False
 )
