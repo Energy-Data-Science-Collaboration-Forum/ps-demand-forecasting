@@ -16,11 +16,11 @@ logging.basicConfig(format="%(asctime)s %(levelname)s: %(message)s", level=loggi
 FORMAT = "%Y%m%d_%H%M%S"
 
 FEATURES = {
-    "TED": "data/elexon_ted_forecast_sample_data.csv",
-    "WIND": "data/elexon_wind_forecast_sample_data.csv",
-    "ACTUAL_D_SOFAR_ALL_BUT_WIND_GT": "data/elexon_electricity_actuals_sample_data.csv",
+    "TED": "data/elexon_ted_forecast_sample.csv",
+    "WIND": "data/elexon_wind_forecast_sample.csv",
+    "ACTUAL_D_SOFAR_ALL_BUT_WIND_GT": "data/elexon_electricity_actuals_sample.csv",
 }
-ACTUALS = {"GAS": "data/gas_actuals_sample_data.csv"}
+ACTUALS = {"GAS": "data/gas_actuals_sample.csv"}
 
 logger.info("Preprocessing actual gas demand")
 gas_demand_actuals = prepare_gas_demand_actuals(ACTUALS["GAS"])
