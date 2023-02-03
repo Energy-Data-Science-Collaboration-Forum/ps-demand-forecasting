@@ -14,6 +14,8 @@ The reason why electricity demand is important for the gas consumed by powerstat
 
 The electricity market operates at a half-hourly granularity. The gas market however does not so we aggregate the half-hourly values to a day value.
 
+**Note**: We're using the API from Elexon's Insights Solution where the TSDF dataset starts from February 2022. The API from Elexon's BM Reports has more historical data. BM Reports will be replaced by Insights Solution in the near future (if you are from the near future, let us know what's going on).
+
 ## Elexon Wind Forecast
 
 ESO also provide Elexon with forecasts for the wind-powered electricity generation which is also updated multiple times in a day. The forecast is at the hourly level (for reasons unknown to us) and we aggregate it to a day value. 
