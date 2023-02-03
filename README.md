@@ -31,7 +31,7 @@ The last run with the full datasets was on 2nd February 2023 with the following 
 
 |Model|MAE|MAPE|
 ---|---|---|
-|PS|6.146|0.124|
+|GLM_63|6.146|0.124|
 
 ## Contributing
 
