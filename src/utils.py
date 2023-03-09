@@ -209,3 +209,42 @@ def fill_46_settlement_period(gen, hourly_settlement_periods=False):
     )
 
     return gen
+
+
+def remove_50_settlement_period(gen):
+    """
+    Function to reduce 50 settlement periods to 48 settlement periods on clock change days.
+
+    Args:
+        gen (pandas DataFrame): Raw dataframe that contains the electricity generation data.
+
+    Returns:
+        gen (pandas DataFrame): Wrangled dataframe with duplicate SPs (due to clock change) removed.
+
+    """
+    gen_50_sp = gen[
+        gen.groupby("ELEC_DAY")["SETTLEMENT_PERIOD"].transform("count") == 50
+    ].copy()
+    if not gen_50_sp.empty:
+        gen_50_sp.loc[:, "SETTLEMENT_PERIOD"] = gen_50_sp.loc[
+            :, "SETTLEMENT_PERIOD"
+        ].apply(lambda x: x - 2 if x > 4 else x)
+        gen_50_sp.loc[gen_50_sp.SETTLEMENT_PERIOD.isin([9, 10]), "GAS_DAY"] = np.nan
+        gen_50_sp["GAS_DAY"] = gen_50_sp["GAS_DAY"].fillna(method="ffill")
+
+        gen_50_sp = (
+            gen_50_sp.groupby(["ELEC_DAY", "SETTLEMENT_PERIOD"])
+            .agg(
+                [lambda x: x.mean() if is_numeric_dtype(x) else x.iloc[0]]
+            )  # take mean or get the first value if not numeric
+            .droplevel(1, axis=1)  # drop lambda column name
+            .reset_index()
+        )
+
+        gen = (
+            gen[~gen.ELEC_DAY.isin(gen_50_sp.ELEC_DAY.unique())]
+            .merge(gen_50_sp, how="outer")
+            .sort_values(["ELEC_DAY", "SETTLEMENT_PERIOD"], ascending=True)
+            .reset_index(drop=True)
+        )
+    return gen

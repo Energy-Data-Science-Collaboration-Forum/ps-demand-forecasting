@@ -1,4 +1,5 @@
 import datetime as dt
+import numpy as np
 import pandas as pd
 from pandas.testing import assert_frame_equal
 from src.utils import (
@@ -8,6 +9,7 @@ from src.utils import (
     remove_zero_ccgt,
     flatten_data,
     fill_46_settlement_period,
+    remove_50_settlement_period,
 )
 
 
@@ -332,6 +334,40 @@ def test_fill_46_settlement_period():
 
     # Test function
     output = fill_46_settlement_period(mock_gen_data)
+
+    # Assert that the output is as expected
+    assert_frame_equal(output, expected_output)
+
+
+def test_remove_50_settlement_period():
+    # Test data
+    mock_gen_data = pd.DataFrame(
+        {
+            "ELEC_DAY": ["2021-01-11"] * 50,
+            "GAS_DAY": ["2021-01-11"] * 50,
+            "CREATED_ON": ["2021-01-10 12:00:00"] * 50,
+            "SETTLEMENT_PERIOD": range(1, 51),
+            "COAL": [1.0] * 50,
+            "WIND": [1.0] * 50,
+            "CCGT": [1.0] * 2 + [6, 5, 2, 4] + [6.0] * 44,
+        }
+    )
+
+    # Expected output
+    expected_output = pd.DataFrame(
+        {
+            "ELEC_DAY": ["2021-01-11"] * 48,
+            "SETTLEMENT_PERIOD": range(1, 49),
+            "GAS_DAY": ["2021-01-11"] * 48,
+            "CREATED_ON": ["2021-01-10 12:00:00"] * 48,
+            "COAL": [1.0] * 48,
+            "WIND": [1.0] * 48,
+            "CCGT": [1.0] * 2 + [4.0, 4.5] + [6.0] * 44,
+        }
+    )
+
+    # Test function
+    output = remove_50_settlement_period(mock_gen_data)
 
     # Assert that the output is as expected
     assert_frame_equal(output, expected_output)
