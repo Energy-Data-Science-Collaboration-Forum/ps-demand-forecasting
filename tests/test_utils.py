@@ -1,9 +1,7 @@
 import datetime as dt
 import pandas as pd
 from pandas.testing import assert_frame_equal
-from src.utils import remove_incomplete_settlement_periods, cutoff_forecast, infer_gas_day, remove_zero_ccgt
-
-
+from src.utils import remove_incomplete_settlement_periods, cutoff_forecast, infer_gas_day, remove_zero_ccgt, flatten_data
 
 def test_infer_gas_day():
 
@@ -268,3 +266,26 @@ def test_remove_zero_ccgt(caplog):
         caplog.records[0].getMessage()
         == "Dummy has 1 Settlement Periods with 0 value CCGT, dropped those Settlement Periods"
     )
+
+
+def test_flatten_data():
+    mock_data = pd.DataFrame(
+        {
+            "GAS_DAY": ["2021-01-11"] * 48 + ["2021-01-12"] * 48,
+            "SETTLEMENT_PERIOD": list(range(1, 49)) * 2,
+            "WIND": [11] * 48 + [22] * 48,
+        },
+    )
+
+    result = flatten_data(mock_data)
+
+    desired_result = pd.DataFrame(
+        index = ['2021-01-11', '2021-01-12'],
+        columns = [f"WIND_{number}" for number in range(1, 49)],
+    )
+    desired_result.index.name = 'GAS_DAY'
+    desired_result.loc['2021-01-11'] = 11
+    desired_result.loc['2021-01-12'] = 22
+    desired_result = desired_result.astype({"WIND_{number}".format(number=number): np.int64 for number in range(1, 49)})
+
+    assert_frame_equal(result, desired_result)

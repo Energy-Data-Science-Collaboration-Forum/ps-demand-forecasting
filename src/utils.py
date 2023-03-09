@@ -1,6 +1,8 @@
 import logging
+import numpy as np
 import pandas as pd
 import datetime as dt
+from pandas.api.types import is_numeric_dtype
 
 logger = logging.getLogger(__name__)
 
@@ -132,3 +134,20 @@ def remove_zero_ccgt(name, elec_actuals):
         elec_actuals = elec_actuals[~mask]
     
     return elec_actuals
+
+
+def flatten_data(df):
+    """
+    Flattens a pandas DataFrame by pivoting it and combining multi-index columns into single level.
+
+    Args:
+    df (pandas.DataFrame): input DataFrame to be flattened, must have GAS_DAY and SETTLEMENT_PERIOD as columns.
+
+    Returns:
+    pandas.DataFrame: output flattened DataFrame.
+    """
+    # pivot data to wide format with GAS_DAY as index and SETTLEMENT_PERIOD as columns
+    df = df.pivot_table(index='GAS_DAY', columns='SETTLEMENT_PERIOD').copy()
+    # combine multi-index columns into single level
+    df.columns = ['_'.join(map(str, col)) for col in df.columns.values]
+    return df
