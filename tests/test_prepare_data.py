@@ -2,7 +2,13 @@ import numpy as np
 import pandas as pd
 from pandas.testing import assert_frame_equal
 import src.prepare_data
-from src.prepare_data import prepare_gas_demand_actuals, prepare_ted_forecast, prepare_wind_forecast, prepare_electricity_actuals, prepare_actual_sofar
+from src.prepare_data import (
+    prepare_gas_demand_actuals,
+    prepare_ted_forecast,
+    prepare_wind_forecast,
+    prepare_electricity_actuals,
+    prepare_actual_sofar,
+)
 
 
 def test_prepare_gas_demand_actuals(monkeypatch):
@@ -43,7 +49,7 @@ def test_prepare_gas_demand_actuals(monkeypatch):
 
 def test_prepare_ted_forecast(monkeypatch):
     date_format = "%Y-%m-%dT%H:%M:%SZ"
-    dates = pd.date_range("2021-11-11", "2021-11-12", freq="30min", inclusive='left')
+    dates = pd.date_range("2021-11-11", "2021-11-12", freq="30min", inclusive="left")
     dates = dates.strftime(date_format)
 
     mock_data = pd.DataFrame(
@@ -51,7 +57,7 @@ def test_prepare_ted_forecast(monkeypatch):
             "startTime": dates,
             "publishTime": ["2021-11-08T10:00:00Z"] * 48,
             "demand": [10.0] * 48,
-            "settlementPeriod":range(1,49)
+            "settlementPeriod": range(1, 49),
         }
     )
 
@@ -70,7 +76,8 @@ def test_prepare_ted_forecast(monkeypatch):
 
     # add data with not enough settlement periods
     dup2 = dup.copy()
-    dup2["startTime"] = (pd.to_datetime(dup2["startTime"]) + pd.Timedelta("1 day")
+    dup2["startTime"] = (
+        pd.to_datetime(dup2["startTime"]) + pd.Timedelta("1 day")
     ).dt.strftime(date_format)
     dup2 = dup2.iloc[:-1, :]
     mock_data = pd.concat([mock_data, dup2])
@@ -82,15 +89,17 @@ def test_prepare_ted_forecast(monkeypatch):
 
     result = prepare_ted_forecast(None)
 
-    desired_result = pd.DataFrame({"TED_DA_FORECAST": [20.0]},
-        index=pd.DatetimeIndex(["2021-11-11"], freq="D", name="GAS_DAY"),)
+    desired_result = pd.DataFrame(
+        {"TED_DA_FORECAST": [20.0]},
+        index=pd.DatetimeIndex(["2021-11-11"], freq="D", name="GAS_DAY"),
+    )
 
     assert_frame_equal(result, desired_result)
 
 
 def test_prepare_wind_forecast(monkeypatch):
     date_format = "%Y-%m-%dT%H:%M:%SZ"
-    dates = pd.date_range("2021-11-11", "2021-11-12", freq="1h", inclusive='left')
+    dates = pd.date_range("2021-11-11", "2021-11-12", freq="1h", inclusive="left")
     dates = dates.strftime(date_format)
 
     mock_data = pd.DataFrame(
@@ -116,7 +125,8 @@ def test_prepare_wind_forecast(monkeypatch):
 
     # add data with not enough settlement periods
     dup2 = dup.copy()
-    dup2["startTime"] = (pd.to_datetime(dup2["startTime"]) + pd.Timedelta("1 day")
+    dup2["startTime"] = (
+        pd.to_datetime(dup2["startTime"]) + pd.Timedelta("1 day")
     ).dt.strftime(date_format)
     dup2 = dup2.iloc[:-1, :]
     mock_data = pd.concat([mock_data, dup2])
@@ -128,30 +138,35 @@ def test_prepare_wind_forecast(monkeypatch):
 
     result = prepare_wind_forecast(None)
 
-    desired_result = pd.DataFrame({"WIND_FORECAST": [20.0]},
-        index=pd.DatetimeIndex(["2021-11-11"], freq="D", name="GAS_DAY"),)
+    desired_result = pd.DataFrame(
+        {"WIND_FORECAST": [20.0]},
+        index=pd.DatetimeIndex(["2021-11-11"], freq="D", name="GAS_DAY"),
+    )
 
     assert_frame_equal(result, desired_result)
 
 
 def test_get_electricity_actuals(monkeypatch):
     date_format = "%Y-%m-%dT%H:%M:%SZ"
-    dates = pd.date_range("2021-11-11", "2021-11-13", freq="30min", inclusive='left')
+    dates = pd.date_range("2021-11-11", "2021-11-13", freq="30min", inclusive="left")
     dates = dates.strftime(date_format)
 
     mock_data = pd.DataFrame(
-            {
-                "startTime": dates,
-                "publishTime": ["2021-11-08T10:00:00Z"] * 48 * 2,
-                "settlementPeriod": list(range(1, 49)) * 2,
-                "COAL": [1.0] * 48 * 2,
-                "WIND": [1.0] * 48 * 2,
-                "CCGT": [1.0] * 48 * 2,
-            }
-        )
-    mock_data = mock_data.melt(id_vars=['startTime', "publishTime","settlementPeriod"], 
-        var_name="fuelType", value_name="generation")
-    
+        {
+            "startTime": dates,
+            "publishTime": ["2021-11-08T10:00:00Z"] * 48 * 2,
+            "settlementPeriod": list(range(1, 49)) * 2,
+            "COAL": [1.0] * 48 * 2,
+            "WIND": [1.0] * 48 * 2,
+            "CCGT": [1.0] * 48 * 2,
+        }
+    )
+    mock_data = mock_data.melt(
+        id_vars=["startTime", "publishTime", "settlementPeriod"],
+        var_name="fuelType",
+        value_name="generation",
+    )
+
     def mock_read_csv(fp):
         return mock_data
 
@@ -169,19 +184,19 @@ def test_get_electricity_actuals(monkeypatch):
 
 def test_get_electricity_actuals_duplicates(monkeypatch):
     date_format = "%Y-%m-%dT%H:%M:%SZ"
-    dates = pd.date_range("2021-11-11", "2021-11-13", freq="30min", inclusive='left')
+    dates = pd.date_range("2021-11-11", "2021-11-13", freq="30min", inclusive="left")
     dates = dates.strftime(date_format)
 
     mock_data = pd.DataFrame(
-            {
-                "startTime": dates,
-                "publishTime": ["2021-11-08T10:00:00Z"] * 48 * 2,
-                "settlementPeriod": list(range(1, 49)) * 2,
-                "COAL": [1.0] * 48 * 2,
-                "WIND": [1.0] * 48 * 2,
-                "CCGT": [1.0] * 48 * 2,
-            }
-        )
+        {
+            "startTime": dates,
+            "publishTime": ["2021-11-08T10:00:00Z"] * 48 * 2,
+            "settlementPeriod": list(range(1, 49)) * 2,
+            "COAL": [1.0] * 48 * 2,
+            "WIND": [1.0] * 48 * 2,
+            "CCGT": [1.0] * 48 * 2,
+        }
+    )
 
     # add duplicate with different created_on date
     dup = mock_data[mock_data["settlementPeriod"] == 1].copy()
@@ -191,8 +206,11 @@ def test_get_electricity_actuals_duplicates(monkeypatch):
     dup["COAL"] = 10.0
     mock_data = pd.concat([mock_data, dup])
 
-    mock_data = mock_data.melt(id_vars=['startTime', "publishTime","settlementPeriod"], 
-        var_name="fuelType", value_name="generation")
+    mock_data = mock_data.melt(
+        id_vars=["startTime", "publishTime", "settlementPeriod"],
+        var_name="fuelType",
+        value_name="generation",
+    )
 
     def mock_read_csv(fp):
         return mock_data
@@ -211,19 +229,21 @@ def test_get_electricity_actuals_duplicates(monkeypatch):
 
 def test_get_electricity_actuals_cutoff(monkeypatch):
     date_format = "%Y-%m-%dT%H:%M:%SZ"
-    dates = pd.date_range("2021-11-11 05:00", "2021-11-11 15:00", freq="30min", inclusive='left')
+    dates = pd.date_range(
+        "2021-11-11 05:00", "2021-11-11 15:00", freq="30min", inclusive="left"
+    )
     dates = dates.strftime(date_format)
 
     mock_data = pd.DataFrame(
-            {
-                "startTime": dates,
-                "publishTime": ["2021-11-11T10:00:00Z"] * len(dates),
-                "settlementPeriod": list(range(1, len(dates)+1)),
-                "COAL": [1.0] * len(dates),
-                "WIND": [1.0] * len(dates),
-                "CCGT": [1.0] * len(dates),
-            }
-        )
+        {
+            "startTime": dates,
+            "publishTime": ["2021-11-11T10:00:00Z"] * len(dates),
+            "settlementPeriod": list(range(1, len(dates) + 1)),
+            "COAL": [1.0] * len(dates),
+            "WIND": [1.0] * len(dates),
+            "CCGT": [1.0] * len(dates),
+        }
+    )
     # add duplicate with created_on date that is too late
     dup = mock_data[mock_data["settlementPeriod"] == 1].copy()
     dup["publishTime"] = (
@@ -234,8 +254,11 @@ def test_get_electricity_actuals_cutoff(monkeypatch):
     dup["CCGT"] = 10.0
     mock_data = pd.concat([mock_data, dup])
 
-    mock_data = mock_data.melt(id_vars=['startTime', "publishTime","settlementPeriod"], 
-        var_name="fuelType", value_name="generation")
+    mock_data = mock_data.melt(
+        id_vars=["startTime", "publishTime", "settlementPeriod"],
+        var_name="fuelType",
+        value_name="generation",
+    )
 
     def mock_read_csv(fp):
         return mock_data
@@ -250,7 +273,6 @@ def test_get_electricity_actuals_cutoff(monkeypatch):
         ),
     )
     assert_frame_equal(result, desired_result)
-
 
 
 def test_get_actual_d_sofar_all_but_wind_gt(monkeypatch):
