@@ -148,7 +148,7 @@ def test_prepare_wind_forecast(monkeypatch):
     assert_frame_equal(result, desired_result)
 
 
-def test_get_electricity_actuals(monkeypatch):
+def test_prepare_electricity_actuals(monkeypatch):
     date_format = "%Y-%m-%dT%H:%M:%SZ"
     dates = pd.date_range("2021-11-11", "2021-11-13", freq="30min", inclusive="left")
     dates = dates.strftime(date_format)
@@ -184,7 +184,7 @@ def test_get_electricity_actuals(monkeypatch):
     assert_frame_equal(result, desired_result)
 
 
-def test_get_electricity_actuals_duplicates(monkeypatch):
+def test_prepare_electricity_actuals_duplicates(monkeypatch):
     date_format = "%Y-%m-%dT%H:%M:%SZ"
     dates = pd.date_range("2021-11-11", "2021-11-13", freq="30min", inclusive="left")
     dates = dates.strftime(date_format)
@@ -229,7 +229,7 @@ def test_get_electricity_actuals_duplicates(monkeypatch):
     assert_frame_equal(result, desired_result)
 
 
-def test_get_electricity_actuals_cutoff(monkeypatch):
+def test_prepare_electricity_actuals_cutoff(monkeypatch):
     date_format = "%Y-%m-%dT%H:%M:%SZ"
     dates = pd.date_range(
         "2021-11-11 05:00", "2021-11-11 15:00", freq="30min", inclusive="left"
@@ -277,7 +277,7 @@ def test_get_electricity_actuals_cutoff(monkeypatch):
     assert_frame_equal(result, desired_result)
 
 
-def test_get_actual_d_sofar_all_but_wind_gt(monkeypatch):
+def test_prepare_actual_d_sofar_all_but_wind_gt(monkeypatch):
     mock_data = pd.DataFrame(
         {
             "COAL": range(10),
@@ -324,7 +324,7 @@ def test_get_actual_d_sofar_all_but_wind_gt(monkeypatch):
     assert_frame_equal(result, desired_result)
 
 
-def test_get_gen_previous_gas_day(monkeypatch):
+def test_prepare_gen_previous_gas_day(monkeypatch):
     mock_data = pd.DataFrame(
         {
             "ELEC_DAY": ["2021-01-11"] * 48
