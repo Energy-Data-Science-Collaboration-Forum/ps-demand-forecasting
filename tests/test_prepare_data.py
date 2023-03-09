@@ -8,6 +8,8 @@ from src.prepare_data import (
     prepare_wind_forecast,
     prepare_electricity_actuals,
     prepare_actual_sofar,
+    prepare_gen_previous_gas_day,
+    aggregate_generation_data
 )
 
 
@@ -320,3 +322,110 @@ def test_get_actual_d_sofar_all_but_wind_gt(monkeypatch):
     )
 
     assert_frame_equal(result, desired_result)
+
+
+def test_get_gen_previous_gas_day(monkeypatch):
+    mock_data = pd.DataFrame(
+        {
+            "ELEC_DAY": ["2021-01-11"] * 48
+            + ["2021-01-12"] * 48
+            + ["2021-01-13"] * 48
+            + ["2021-01-14"] * 48,
+            "GAS_DAY": ["2021-01-10"] * 10
+            + ["2021-01-11"] * 48
+            + ["2021-01-12"] * 48
+            + ["2021-01-13"] * 48
+            + ["2021-01-14"] * 38,
+            "CREATED_ON": ["2021-01-13 12:00:00"] * 192,
+            "SP": list(range(1, 49)) * 4,
+            "COAL": [1.0] * 192,
+            "WIND": [1.5] * 192,
+            "CCGT": [1.0] * 48 + [2.0] * 48 + [3.0] * 48 + [4.0] * 48,
+            "RECORDTYPE": ["FUELHH"] * 192,
+            "RUNID": ["1234"] * 192,
+        }
+    )
+
+    mock_data["INTELEC"] = mock_data["INTEW"] = mock_data["INTFR"] = mock_data[
+        "INTIFA2"
+    ] = mock_data["INTIRL"] = mock_data["INTNED"] = mock_data["INTNEM"] = mock_data[
+        "INTNSL"
+    ] = mock_data["OIL"] = mock_data["NUCLEAR"] = mock_data["NPSHYD"] = mock_data[
+        "PS"
+    ] = mock_data["BIOMASS"] = mock_data["OCGT"] = mock_data["OTHER"] = mock_data["COAL"]
+
+    def mock_read_csv(fp):
+        return mock_data
+
+    monkeypatch.setattr(pd, "read_csv", mock_read_csv)
+    # Test function
+    output = prepare_gen_previous_gas_day(None)
+
+    # Expected output
+    expected_output = np.concatenate(
+        [
+            np.ones((3, 48)) * 8,
+            (np.ones((10, 3)) * np.array([3, 4, 5])).T,
+            (np.ones((38, 3)) * np.array([2, 3, 4])).T,
+            np.ones((3, 48)) * 7.0,
+            np.ones((3, 48)) * 1.5,
+        ],
+        axis=1,
+    )
+
+    expected_output = pd.DataFrame(
+        expected_output,
+        columns=["INTERCONNECTORS_" + str(i) for i in range(1, 49)]
+        + ["POWER_STATION_" + str(i) for i in range(1, 49)]
+        + ["REST_" + str(i) for i in range(1, 49)]
+        + ["WIND_" + str(i) for i in range(1, 49)],
+        index=pd.DatetimeIndex(
+            ["2021-01-13", "2021-01-14", "2021-01-15"], name="GAS_DAY"
+        ),
+    )
+
+    # Assert that the output is as expected
+    assert_frame_equal(output, expected_output)
+
+
+def test_aggregate_generation_data():
+    mock_data = pd.DataFrame(
+        {
+            "GAS_DAY": ["2021-01-11"] * 48,
+            "SETTLEMENT_PERIOD": range(1, 49),
+            "CCGT": [1] * 48,
+            "OIL": [2] * 48,
+            "COAL": [3] * 48,
+            "NUCLEAR": [4] * 48,
+            "WIND": [5] * 48,
+            "PS": [6] * 48,
+            "NPSHYD": [7] * 48,
+            "OCGT": [8] * 48,
+            "OTHER": [9] * 48,
+            "INTFR": [10] * 48,
+            "INTIRL": [11] * 48,
+            "INTNED": [12] * 48,
+            "INTEW": [13] * 48,
+            "BIOMASS": [14] * 48,
+            "INTNEM": [15] * 48,
+            "INTELEC": [16] * 48,
+            "INTIFA2": [17] * 48,
+            "INTNSL": [18] * 48,
+        },
+    )
+
+    result = aggregate_generation_data(mock_data)
+
+    desired_result = pd.DataFrame(
+        {
+            "GAS_DAY": ["2021-01-11"] * 48,
+            "SETTLEMENT_PERIOD": range(1, 49),
+            "WIND": [5] * 48,
+            "INTERCONNECTORS": [112] * 48,
+            "POWER_STATION": [9] * 48,
+            "REST": [45] * 48,
+        },
+    )
+
+    assert_frame_equal(result, desired_result)
+

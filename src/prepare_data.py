@@ -1,7 +1,8 @@
 import datetime as dt
+import numpy as np
 import pandas as pd
 
-from src.utils import cutoff_forecast, remove_incomplete_settlement_periods, infer_gas_day, remove_zero_ccgt
+from src.utils import cutoff_forecast, remove_incomplete_settlement_periods, infer_gas_day, remove_zero_ccgt, fill_46_settlement_period, remove_50_settlement_period, flatten_data
 
 
 def prepare_electricity_features(file_paths):
@@ -18,10 +19,80 @@ def prepare_electricity_features(file_paths):
     features.append(prepare_ted_forecast(file_paths["TED"]))
     features.append(prepare_wind_forecast(file_paths["WIND"]))
     features.append(prepare_actual_sofar(file_paths["ACTUAL_D_SOFAR_ALL_BUT_WIND_GT"]))
-
+    features.append(prepare_gen_previous_gas_day(file_paths["ELECTRICITY_ACTUALS"]))
     features = pd.concat(features, axis=1).dropna()
 
     return features
+
+
+def prepare_gen_previous_gas_day(file_path):
+    """
+    Function to get values from SP1 to SP48 for each gas day with the option to shift data by days.
+
+    Args:
+        file_path (str): The full file path to the TED forecast data
+
+    Returns:
+        gen_previous (pandas DataFrame): Wrangled dataframe with generation data from previous day(s) selected.
+        For example the data for GAS_DAY 20-01-2022 is the actual demand from 18-01-2022 and they 
+        will be used as features for making predictions for 20-01-2022.
+    """
+    name = "DFM_ELXN_FUELHH_ACTUAL_GEN"
+
+    gen = pd.read_csv(file_path)
+
+    for col in ["ELEC_DAY", "CREATED_ON", "GAS_DAY"]:
+        gen[col] = pd.to_datetime(gen[col])
+
+    # rename, makes it easier to recognise
+    gen = gen.rename({"SP": "SETTLEMENT_PERIOD"}, axis=1)
+
+    gen = remove_zero_ccgt(name, gen)
+
+    # take latest values
+    gen = gen.sort_values(
+        ["ELEC_DAY", "SETTLEMENT_PERIOD", "CREATED_ON"], ascending=True
+    )
+
+    gen = gen.groupby(["ELEC_DAY", "SETTLEMENT_PERIOD"]).last().reset_index()
+
+    gen = remove_incomplete_settlement_periods(name, gen)
+
+    # fill NA with 0 in gen
+    gen = gen.fillna(0)
+    gen = fill_46_settlement_period(gen)
+    gen = remove_50_settlement_period(gen)
+
+    gen_within_day = (gen
+        .drop(columns=["CREATED_ON", "RECORDTYPE", "RUNID"])
+        .groupby(["GAS_DAY", "SETTLEMENT_PERIOD"])
+        .last()
+        .sort_values(["GAS_DAY", "ELEC_DAY", "SETTLEMENT_PERIOD"], ascending=True)
+        .reset_index()
+        )
+
+    # create placeholders for last few days (number of days set by "days" parameter)
+    gen_recent_days = gen_within_day.iloc[-48*2:].reset_index(drop=True).copy()
+    gen_recent_days.loc[:, ["GAS_DAY", "ELEC_DAY"]] = gen_recent_days.loc[:, ["GAS_DAY", "ELEC_DAY"]] + pd.Timedelta(days=2)
+    gen_recent_days.iloc[:,3:] = np.nan
+    gen_within_day = pd.concat([gen_within_day, gen_recent_days], axis=0).reset_index(drop=True)
+
+    # Note that the data are not continuous in GAS_DAY
+    gen_previous = (gen_within_day
+        .drop(columns='GAS_DAY')
+        .shift(48*2, axis=0)
+        .merge(gen_within_day.GAS_DAY, left_index=True, right_index=True)
+        .dropna()
+        .groupby(['GAS_DAY', 'ELEC_DAY', 'SETTLEMENT_PERIOD'])
+        .last()
+        .reset_index()
+        .drop(columns='ELEC_DAY')
+        )
+    # change SETTLEMENT_PERIOD to int64 type
+    gen_previous.loc[:, 'SETTLEMENT_PERIOD'] = gen_previous.loc[:, 'SETTLEMENT_PERIOD'].astype('int64')
+    result = aggregate_generation_data(gen_previous)
+    result = flatten_data(result)
+    return result
 
 
 def prepare_ted_forecast(file_path):
@@ -227,3 +298,32 @@ def prepare_gas_demand_actuals(file_path):
     demand = demand.fillna(0).sort_index(ascending=True)
 
     return demand
+
+
+def aggregate_generation_data(gen):
+    """
+    Aggregate generation data into total interconnectors, power stations and rest
+    """
+    interconnectors = [
+        "INTELEC",  # france
+        "INTEW",  # ireland
+        "INTFR",  # france
+        "INTIFA2",  # france
+        "INTIRL",  # ireland
+        "INTNED",  # netherlands
+        "INTNEM",  # belgium
+        "INTNSL",  # norway
+        ]
+    power_stations = ['CCGT', 'OCGT']
+    rest = ['OIL', 'COAL', 'NUCLEAR', 'PS', 'NPSHYD', 'OTHER', 'BIOMASS']
+
+    gen_aggregated = (
+        gen
+        .assign(INTERCONNECTORS=gen[interconnectors].sum(axis=1))
+        .drop(interconnectors, axis=1)
+        .assign(POWER_STATION=gen[power_stations].sum(axis=1))
+        .drop(power_stations, axis=1)
+        .assign(REST=gen[rest].sum(axis=1))
+        .drop(rest, axis=1)
+        )
+    return gen_aggregated
