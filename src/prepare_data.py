@@ -20,9 +20,56 @@ def prepare_electricity_features(file_paths):
     features.append(prepare_wind_forecast(file_paths["WIND"]))
     features.append(prepare_actual_sofar(file_paths["ACTUAL_D_SOFAR_ALL_BUT_WIND_GT"]))
     features.append(prepare_gen_previous_gas_day(file_paths["ELECTRICITY_ACTUALS"]))
+    features.append(prepare_hourly_wind_forecast(file_paths["WIND"]))
     features = pd.concat(features, axis=1).dropna()
 
     return features
+
+
+def prepare_hourly_wind_forecast(file_path):
+    """
+    Function to get wind generation forecast for each gas day.
+
+    Args:
+        file_path (str): The full file path to the TED forecast data
+
+    Returns:
+        windf (pandas DataFrame): Wrangled dataframe with forecasted demand data.
+    """
+    windf = pd.read_csv(file_path)
+
+    # wrangle
+    for col in ["GAS_DAY", "CREATED_ON", "ELEC_DAY"]:
+        windf[col] = pd.to_datetime(windf[col])
+
+    windf = windf.rename({"SP": "SETTLEMENT_PERIOD"}, axis=1)
+
+    windf["ELEC_DATETIME"] = windf["ELEC_DAY"] + (
+        windf["SETTLEMENT_PERIOD"] - 1
+    ) * pd.Timedelta("30 min")
+
+    ## not adding horizon days because we're using the day ahead forecasts for all horizons
+    windf = cutoff_forecast(windf)
+
+    ## keep latest for a given settlement period for a given day
+    windf = windf.sort_values(["ELEC_DATETIME", "CREATED_ON"], ascending=True)
+    windf = windf.groupby(["ELEC_DATETIME"]).last().reset_index()
+
+    windf = remove_incomplete_settlement_periods(
+        "DFM_ELXN_WIND_OT", windf, hourly_settlement_periods=True
+    )
+    windf = fill_46_settlement_period(windf, hourly_settlement_periods=True)
+    windf = (
+        windf
+        .drop(columns=['ELEC_DATETIME', 'ORIGI', 'OUT', 'CREATED_ON', 'RUNID'])
+        .groupby(["GAS_DAY", "ELEC_DAY", "SETTLEMENT_PERIOD"])
+        .last()
+        .reset_index()
+        .drop(columns=['ELEC_DAY'])
+        .rename(columns={'FINAL': 'WIND_FORECAST'})
+        )
+    result = flatten_data(windf)
+    return result
 
 
 def prepare_gen_previous_gas_day(file_path):

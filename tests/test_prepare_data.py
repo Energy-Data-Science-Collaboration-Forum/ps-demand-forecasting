@@ -9,7 +9,8 @@ from src.prepare_data import (
     prepare_electricity_actuals,
     prepare_actual_sofar,
     prepare_gen_previous_gas_day,
-    aggregate_generation_data
+    aggregate_generation_data,
+    prepare_hourly_wind_forecast
 )
 
 
@@ -429,3 +430,50 @@ def test_aggregate_generation_data():
 
     assert_frame_equal(result, desired_result)
 
+
+def test_prepare_hourly_wind_forecast(monkeypatch):
+    mock_data = pd.DataFrame(
+        {
+            "GAS_DAY": ["2021-01-11"] * 24,
+            "ELEC_DAY": ["2021-01-11"] * 24,
+            "SP": [(2 * n + 1) for n in range(24)],  # get all odd numbers up to 48
+            "ORIGI": [9] * 24,
+            "FINAL": [10] * 24,
+            "OUT": [8] * 24,
+            "CREATED_ON": ["2021-01-08 10:00:00"] * 24,
+            "RUNID": ["123"] * 24,
+        }
+    )
+
+    # add data that is too recent so will be cutoff
+    dup = mock_data.copy()
+    dup["CREATED_ON"] = dup["ELEC_DAY"]
+    mock_data = mock_data.append(dup)
+
+    # add data with a slightly later created date
+    dup = mock_data.copy()
+    dup["CREATED_ON"] = (
+        pd.to_datetime(dup["CREATED_ON"]) + pd.Timedelta("30 minutes")
+    ).dt.strftime("%Y-%m-%d %H:%M:%S")
+    dup["FINAL"] = dup["FINAL"] + 10
+    mock_data = mock_data.append(dup)
+
+    # add data with not enough settlement periods
+    dup2 = dup.copy()
+    dup2["GAS_DAY"] = "2021-01-12"
+    dup2["ELEC_DAY"] = "2021-01-12"
+    dup2 = dup2.iloc[-1]
+    mock_data = mock_data.append(dup2)
+
+
+    def mock_read_csv(fp):        
+        return mock_data
+
+    monkeypatch.setattr(pd, "read_csv", mock_read_csv)
+
+    result = prepare_hourly_wind_forecast(None)
+    desired_result = np.array([[20]]*24).T
+    desired_result = pd.DataFrame(desired_result, columns=["WIND_FORECAST_"+str(i) for i in range(1,49,2)], 
+                                  index=pd.DatetimeIndex(["2021-01-11"], name="GAS_DAY"))
+    
+    assert_frame_equal(result, desired_result, check_dtype=False)
