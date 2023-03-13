@@ -10,7 +10,8 @@ from src.prepare_data import (
     prepare_actual_sofar,
     prepare_gen_previous_gas_day,
     aggregate_generation_data,
-    prepare_hourly_wind_forecast
+    prepare_hourly_wind_forecast,
+    prepare_ted_half_hourly_forecast
 )
 
 
@@ -477,3 +478,95 @@ def test_prepare_hourly_wind_forecast(monkeypatch):
                                   index=pd.DatetimeIndex(["2021-01-11"], name="GAS_DAY"))
     
     assert_frame_equal(result, desired_result, check_dtype=False)
+
+
+def test_get_ted_half_hourly_forecast(monkeypatch):
+    mock_data = pd.DataFrame(
+        {
+            "GAS_DAY": ["2021-01-10"] * 48 + ["2021-01-11"] * 48,
+            "ELEC_DAY": ["2021-01-10"] * 48 + ["2021-01-11"] * 48,
+            "CREATED_ON": ["2021-01-08 10:00:00"] * 96,
+            "RECORDTYPE": ["DATF"] * 96,
+            "SP": list(range(1, 49)) * 2,
+            "DEMAND": [10.0] * 48 + [20.0] * 48,
+        }
+    )
+
+    # add data that is too recent so will be cutoff
+    dup = mock_data.copy()
+    dup["CREATED_ON"] = dup["ELEC_DAY"]
+    mock_data = pd.concat([mock_data, dup])
+
+    # add data with a slightly later created date
+    dup = mock_data.copy()
+    dup["CREATED_ON"] = (
+        pd.to_datetime(dup["CREATED_ON"]) + pd.Timedelta("30 minutes")
+    ).dt.strftime("%Y-%m-%d %H:%M:%S")
+    dup["DEMAND"] = dup["DEMAND"] + 10
+    mock_data = pd.concat([mock_data, dup])
+
+    # add data with not enough settlement periods
+    dup2 = dup.copy()
+    dup2["GAS_DAY"] = "2021-01-12"
+    dup2["ELEC_DAY"] = "2021-01-12"
+    dup2 = dup2.iloc[-1]
+    mock_data = pd.concat([mock_data, dup])
+
+    def mock_read_csv(fp):
+        return mock_data
+
+    monkeypatch.setattr(pd, "read_csv", mock_read_csv)
+
+    result = prepare_ted_half_hourly_forecast(None, days=0)
+    
+    desired_result = (np.ones((48, 2)) * np.array([20, 30])).T
+    desired_result = pd.DataFrame(desired_result, columns=["DEMAND_"+str(i) for i in range(1,49)], 
+                                  index=pd.DatetimeIndex(["2021-01-10", "2021-01-11"], name="GAS_DAY"))
+    
+    assert_frame_equal(result, desired_result)
+
+
+def test_get_ted_half_hourly_forecast_previous_day(monkeypatch):
+    mock_data = pd.DataFrame(
+        {
+            "GAS_DAY": ["2021-01-10"] * 48 + ["2021-01-11"] * 48,
+            "ELEC_DAY": ["2021-01-10"] * 48 + ["2021-01-11"] * 48,
+            "CREATED_ON": ["2021-01-08 10:00:00"] * 96,
+            "RECORDTYPE": ["DATF"] * 96,
+            "SP": list(range(1, 49)) * 2,
+            "DEMAND": [10.0] * 48 + [20.0] * 48,
+        }
+    )
+
+    # add data that is too recent so will be cutoff
+    dup = mock_data.copy()
+    dup["CREATED_ON"] = dup["ELEC_DAY"]
+    mock_data = pd.concat([mock_data, dup])
+
+    # add data with a slightly later created date
+    dup = mock_data.copy()
+    dup["CREATED_ON"] = (
+        pd.to_datetime(dup["CREATED_ON"]) + pd.Timedelta("30 minutes")
+    ).dt.strftime("%Y-%m-%d %H:%M:%S")
+    dup["DEMAND"] = dup["DEMAND"] + 10
+    mock_data = pd.concat([mock_data, dup])
+
+    # add data with not enough settlement periods
+    dup2 = dup.copy()
+    dup2["GAS_DAY"] = "2021-01-12"
+    dup2["ELEC_DAY"] = "2021-01-12"
+    dup2 = dup2.iloc[-1]
+    mock_data = pd.concat([mock_data, dup])
+
+    def mock_read_csv(fp):
+        return mock_data
+
+    monkeypatch.setattr(pd, "read_csv", mock_read_csv)
+
+    result = prepare_ted_half_hourly_forecast(None, days=1)
+
+    desired_result = np.array([[20.0]]*48).T
+    desired_result = pd.DataFrame(desired_result, columns=["DEMAND_"+str(i) for i in range(1,49)], 
+                                  index=pd.DatetimeIndex(["2021-01-11"], name="GAS_DAY"))
+
+    assert_frame_equal(result, desired_result)

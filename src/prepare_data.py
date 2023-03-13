@@ -21,9 +21,81 @@ def prepare_electricity_features(file_paths):
     features.append(prepare_actual_sofar(file_paths["ACTUAL_D_SOFAR_ALL_BUT_WIND_GT"]))
     features.append(prepare_gen_previous_gas_day(file_paths["ELECTRICITY_ACTUALS"]))
     features.append(prepare_hourly_wind_forecast(file_paths["WIND"]))
+    features.append(prepare_ted_half_hourly_forecast(file_paths["TED"]))
     features = pd.concat(features, axis=1).dropna()
 
     return features
+
+
+
+def prepare_ted_half_hourly_forecast(file_path, days=1):
+    """
+    Function to get half-hourly electric demand forecast for each gas day with the option to shift data by days.
+
+    Args:
+        file_path (str): The full file path to the TED forecast data
+        days (int): Number of days to shift the data. Default is 2.
+
+    Returns:
+        demand_forecast (pandas DataFrame): Wrangled dataframe with forecasted demand data.
+        For example if days=1, then the data for GAS_DAY 20-01-2022 is the predicted demand for 19-01-2022 and they 
+        will be used as features for makeing predictions for 20-01-2022.
+    """
+    name = "DFM_ELXN_D_DA_DEMAND"
+
+    demand = pd.read_csv(file_path)
+
+    # wrangle
+    for col in ["GAS_DAY", "CREATED_ON", "ELEC_DAY"]:
+        demand[col] = pd.to_datetime(demand[col])
+
+    demand = demand.rename(
+        columns={"SP": "SETTLEMENT_PERIOD", "RECORDTYPE": "RECORD_TYPE"}
+    )
+
+    # keep only available data at 12am the day before we predict for
+    demand = cutoff_forecast(demand)
+
+    demand["ELEC_DATETIME"] = demand["ELEC_DAY"] + (
+        demand["SETTLEMENT_PERIOD"] - 1
+    ) * pd.Timedelta("30 min")
+
+    # keep latest for a given settlement period for a given day
+    demand = demand.sort_values(
+        ["ELEC_DATETIME", "RECORD_TYPE", "CREATED_ON"],
+        ascending=True,
+    )
+    demand = demand.groupby(["ELEC_DATETIME", "RECORD_TYPE"]).last().reset_index()
+    demand = demand[demand["RECORD_TYPE"] == "DATF"].drop(columns="RECORD_TYPE")
+
+    demand = remove_incomplete_settlement_periods(name, demand)
+
+    demand = fill_46_settlement_period(demand)
+    demand = (
+        (demand[demand.groupby(["GAS_DAY"])
+        ["SETTLEMENT_PERIOD"]
+        .transform("count") == 48]
+        )
+        .loc[:, ['GAS_DAY', 'ELEC_DAY', 'SETTLEMENT_PERIOD', 'DEMAND']]
+        .reset_index(drop=True)
+    )
+
+    # Note that the data are not continuous in GAS_DAY
+    demand_forecast = (
+        demand
+        .drop(columns='GAS_DAY')
+        .shift(48*days, axis=0)
+        .merge(demand.GAS_DAY, left_index=True, right_index=True)
+        .dropna()
+        .groupby(['GAS_DAY', 'ELEC_DAY', 'SETTLEMENT_PERIOD'])
+        .last()
+        .reset_index()
+        .drop(columns='ELEC_DAY')
+        )
+    # change SETTLEMENT_PERIOD to int64 type
+    demand_forecast.loc[:, 'SETTLEMENT_PERIOD'] = demand_forecast.loc[:, 'SETTLEMENT_PERIOD'].astype('int64')
+    result = flatten_data(demand_forecast)
+    return result
 
 
 def prepare_hourly_wind_forecast(file_path):
