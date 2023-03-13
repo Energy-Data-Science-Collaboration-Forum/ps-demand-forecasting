@@ -19,9 +19,10 @@ def prepare_electricity_features(file_paths):
     features.append(prepare_ted_forecast(file_paths["TED"]))
     features.append(prepare_wind_forecast(file_paths["WIND"]))
     features.append(prepare_actual_sofar(file_paths["ACTUAL_D_SOFAR_ALL_BUT_WIND_GT"]))
-    features.append(prepare_gen_previous_gas_day(file_paths["ELECTRICITY_ACTUALS"]))
-    features.append(prepare_hourly_wind_forecast(file_paths["WIND"]))
-    features.append(prepare_ted_half_hourly_forecast(file_paths["TED"]))
+    features.append(prepare_gen_previous_gas_day(file_paths["ELECTRICITY_ACTUALS"]).add_suffix('_PREVIOUS_DAY'))
+    features.append(prepare_hourly_wind_forecast(file_paths["WIND"]).add_suffix('_NEXT_DAY'))
+    features.append(prepare_ted_half_hourly_forecast(file_paths["TED"]).add_suffix('_CURRENT_DAY'))
+    features.append(prepare_ted_half_hourly_forecast(file_paths["TED"], days=0).add_suffix('_NEXT_DAY'))
     features = pd.concat(features, axis=1).dropna()
 
     return features
