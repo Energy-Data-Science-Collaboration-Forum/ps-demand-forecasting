@@ -42,32 +42,43 @@ def prepare_ted_half_hourly_forecast(file_path, days=1):
         For example if days=1, then the data for GAS_DAY 20-01-2022 is the predicted demand for 19-01-2022 and they 
         will be used as features for makeing predictions for 20-01-2022.
     """
-    name = "DFM_ELXN_D_DA_DEMAND"
+    name = "TED_DA_HALF_HOURLY"
 
     demand = pd.read_csv(file_path)
 
-    # wrangle
-    for col in ["GAS_DAY", "CREATED_ON", "ELEC_DAY"]:
-        demand[col] = pd.to_datetime(demand[col])
-
     demand = demand.rename(
-        columns={"SP": "SETTLEMENT_PERIOD", "RECORDTYPE": "RECORD_TYPE"}
+        columns={
+            "startTime": "ELEC_DATETIME",
+            "publishTime": "CREATED_ON",
+            "demand": "DEMAND",
+            "settlementPeriod": "SETTLEMENT_PERIOD",
+            "settlementDate": "ELEC_DAY"
+        }
     )
+
+    for col in ["CREATED_ON", "ELEC_DATETIME"]:
+        demand[col] = (
+            pd.to_datetime(demand[col])
+            .dt.tz_convert("Europe/London")
+            .dt.tz_localize(None)
+        )
+
+    demand["GAS_DAY"] = demand["ELEC_DATETIME"].apply(
+        lambda edt: infer_gas_day(None, None, actual_datetime=edt)
+    )
+    for col in ["GAS_DAY", "ELEC_DAY"]:
+        demand[col] = pd.to_datetime(demand[col])
 
     # keep only available data at 12am the day before we predict for
     demand = cutoff_forecast(demand)
 
-    demand["ELEC_DATETIME"] = demand["ELEC_DAY"] + (
-        demand["SETTLEMENT_PERIOD"] - 1
-    ) * pd.Timedelta("30 min")
-
     # keep latest for a given settlement period for a given day
     demand = demand.sort_values(
-        ["ELEC_DATETIME", "RECORD_TYPE", "CREATED_ON"],
+        ["ELEC_DATETIME", "CREATED_ON"],
         ascending=True,
     )
-    demand = demand.groupby(["ELEC_DATETIME", "RECORD_TYPE"]).last().reset_index()
-    demand = demand[demand["RECORD_TYPE"] == "DATF"].drop(columns="RECORD_TYPE")
+    demand = demand.groupby(["ELEC_DATETIME"]).last().reset_index()
+    demand = demand.drop(columns="dataset")
 
     demand = remove_incomplete_settlement_periods(name, demand)
 
