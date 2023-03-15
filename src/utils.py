@@ -248,3 +248,23 @@ def remove_50_settlement_period(gen):
             .reset_index(drop=True)
         )
     return gen
+
+
+def fix_missing_values(input_data):
+    """Remove missing values from the beginning and end of the data and fill the remaining ones
+
+    Args:
+        input_data (DataFrame): A data frame with or without missing values
+
+    Returns:
+        DataFrame: A data frame with no missing values
+    """
+    # filter out missing values at the begin and end
+    input_data = input_data.dropna()
+
+    # now complete the timeseries
+    input_data = input_data.reindex(pd.date_range(input_data.index.min(), input_data.index.max()))
+    # our best guess is yesterday's value
+    input_data = input_data.fillna(method='ffill')
+
+    return input_data
