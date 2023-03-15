@@ -182,15 +182,45 @@ def prepare_gen_previous_gas_day(file_path):
         For example the data for GAS_DAY 20-01-2022 is the actual demand from 18-01-2022 and they 
         will be used as features for making predictions for 20-01-2022.
     """
-    name = "DFM_ELXN_FUELHH_ACTUAL_GEN"
+    name = "ELECTRICITY GEN"
 
     gen = pd.read_csv(file_path)
 
-    for col in ["ELEC_DAY", "CREATED_ON", "GAS_DAY"]:
-        gen[col] = pd.to_datetime(gen[col])
+    gen = gen.rename(
+        columns={
+            "settlementDate": "ELEC_DAY",
+            "startTime": "ELEC_DATETIME",
+            "publishTime": "CREATED_ON",
+            "fuelType": "FUEL_TYPE",
+            "settlementPeriod": "SETTLEMENT_PERIOD",
+        }
+    )
 
-    # rename, makes it easier to recognise
-    gen = gen.rename({"SP": "SETTLEMENT_PERIOD"}, axis=1)
+    for col in ["ELEC_DATETIME", "CREATED_ON"]:
+        gen[col] = pd.to_datetime(gen[col]).dt.tz_convert("Europe/London").dt.tz_localize(None)
+
+    gen["ELEC_DAY"] = pd.to_datetime(gen["ELEC_DAY"])
+    gen["GAS_DAY"] = gen["ELEC_DATETIME"].apply(
+        lambda edt: infer_gas_day(None, None, actual_datetime=edt)
+    )
+    gen["GAS_DAY"] = pd.to_datetime(gen["GAS_DAY"])
+
+    gen = (
+        gen.drop_duplicates()
+        .pivot(
+            index=[
+                "ELEC_DAY",
+                "ELEC_DATETIME",
+                "GAS_DAY",
+                "SETTLEMENT_PERIOD",
+                "CREATED_ON",
+            ],
+            columns="FUEL_TYPE",
+            values="generation",
+        )
+        .reset_index()
+    )
+    gen.columns.name = None
 
     gen = remove_zero_ccgt(name, gen)
 
@@ -209,16 +239,16 @@ def prepare_gen_previous_gas_day(file_path):
     gen = remove_50_settlement_period(gen)
 
     gen_within_day = (gen
-        .drop(columns=["CREATED_ON", "RECORDTYPE", "RUNID"])
+        .drop(columns=["CREATED_ON"])
         .groupby(["GAS_DAY", "SETTLEMENT_PERIOD"])
         .last()
-        .sort_values(["GAS_DAY", "ELEC_DAY", "SETTLEMENT_PERIOD"], ascending=True)
+        .sort_values(["GAS_DAY", "ELEC_DATETIME", "SETTLEMENT_PERIOD"], ascending=True)
         .reset_index()
         )
 
     # create placeholders for last few days (number of days set by "days" parameter)
     gen_recent_days = gen_within_day.iloc[-48*2:].reset_index(drop=True).copy()
-    gen_recent_days.loc[:, ["GAS_DAY", "ELEC_DAY"]] = gen_recent_days.loc[:, ["GAS_DAY", "ELEC_DAY"]] + pd.Timedelta(days=2)
+    gen_recent_days[["GAS_DAY", "ELEC_DAY"]] = gen_recent_days[["GAS_DAY", "ELEC_DAY"]] + pd.Timedelta(days=2)
     gen_recent_days.iloc[:,3:] = np.nan
     gen_within_day = pd.concat([gen_within_day, gen_recent_days], axis=0).reset_index(drop=True)
 
@@ -231,10 +261,10 @@ def prepare_gen_previous_gas_day(file_path):
         .groupby(['GAS_DAY', 'ELEC_DAY', 'SETTLEMENT_PERIOD'])
         .last()
         .reset_index()
-        .drop(columns='ELEC_DAY')
+        .drop(columns=["ELEC_DAY", "ELEC_DATETIME"])
         )
     # change SETTLEMENT_PERIOD to int64 type
-    gen_previous.loc[:, 'SETTLEMENT_PERIOD'] = gen_previous.loc[:, 'SETTLEMENT_PERIOD'].astype('int64')
+    gen_previous['SETTLEMENT_PERIOD'] = gen_previous['SETTLEMENT_PERIOD'].astype('int64')
     result = aggregate_generation_data(gen_previous)
     result = flatten_data(result)
     return result

@@ -329,22 +329,15 @@ def test_prepare_actual_d_sofar_all_but_wind_gt(monkeypatch):
 def test_prepare_gen_previous_gas_day(monkeypatch):
     mock_data = pd.DataFrame(
         {
-            "ELEC_DAY": ["2021-01-11"] * 48
+            "settlementDate": ["2021-01-11"] * 48
             + ["2021-01-12"] * 48
             + ["2021-01-13"] * 48
             + ["2021-01-14"] * 48,
-            "GAS_DAY": ["2021-01-10"] * 10
-            + ["2021-01-11"] * 48
-            + ["2021-01-12"] * 48
-            + ["2021-01-13"] * 48
-            + ["2021-01-14"] * 38,
-            "CREATED_ON": ["2021-01-13 12:00:00"] * 192,
-            "SP": list(range(1, 49)) * 4,
+            "publishTime": ["2021-01-13T12:00:00Z"] * 192,
+            "settlementPeriod": list(range(1, 49)) * 4,
             "COAL": [1.0] * 192,
             "WIND": [1.5] * 192,
             "CCGT": [1.0] * 48 + [2.0] * 48 + [3.0] * 48 + [4.0] * 48,
-            "RECORDTYPE": ["FUELHH"] * 192,
-            "RUNID": ["1234"] * 192,
         }
     )
 
@@ -356,6 +349,11 @@ def test_prepare_gen_previous_gas_day(monkeypatch):
         "PS"
     ] = mock_data["BIOMASS"] = mock_data["OCGT"] = mock_data["OTHER"] = mock_data["COAL"]
 
+    mock_data["startTime"] = pd.to_datetime(mock_data["settlementDate"]) + pd.Timedelta("30 min") * (mock_data["settlementPeriod"]-1)
+    mock_data["startTime"] = mock_data["startTime"].dt.strftime(date_format="%Y-%m-%dT%H:%M:%SZ")
+
+    mock_data = mock_data.melt(id_vars=['settlementDate', 'publishTime', 'settlementPeriod', 'startTime'], value_name='generation', var_name='fuelType')
+    
     def mock_read_csv(fp):
         return mock_data
 
