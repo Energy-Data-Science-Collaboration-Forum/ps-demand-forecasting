@@ -8,6 +8,8 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from prophet import Prophet
 
+from src.utils import fix_missing_values
+
 logger = logging.getLogger(__name__)
 
 PROPHET_FEATURES = [
@@ -54,43 +56,50 @@ def train_gam(target, features, min_train=30):
     X = select_features(features)
     preprocessor = get_preprocessor()
 
-    test_predictions = []
-    nsplits = abs(round((X.index.min() - X.index.max()).days))
-    tscv = TimeSeriesSplit(n_splits=nsplits)
-
-    prophmodel = Prophet(daily_seasonality=False, yearly_seasonality=False)
-    prophmodel.add_country_holidays(country_name="UK")
-
-    for regressor in PROPHET_FEATURES:
-        prophmodel.add_regressor(regressor)
-
     # fit on training data
-    proph_data = pd.concat([X, target], axis=1).rename({"Y": "y"}, axis=1)
+    proph_data = pd.concat([X, target], axis=1).rename({"PS": "y"}, axis=1)
+    proph_data = fix_missing_values(proph_data)
     proph_data.index.name = "ds"
-    cols = proph_data.columns.tolist() + ["PCA"+str(i) for i in range(13)]
+    cols = X.columns.tolist() + [f"PCA{i}" for i in range(1, 14)]
+
+    test_predictions = []
+    nsplits = abs(round((proph_data.index.min() - proph_data.index.max()).days))
+    tscv = TimeSeriesSplit(n_splits=nsplits)
 
     for train_index, test_index in tscv.split(proph_data):
 
         if len(train_index) < min_train:
             continue
     
-        X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+        X_train = proph_data.drop(columns="y").iloc[train_index]
+        y_train = proph_data[["y"]].iloc[train_index]
+        X_test = proph_data.drop(columns="y").iloc[test_index]
 
         X_train = pd.DataFrame(preprocessor.fit_transform(X_train), columns=cols, index=X_train.index)
         X_test = pd.DataFrame(preprocessor.transform(X_test), columns=cols, index=X_test.index)
 
-        model = prophmodel.fit(X_train.reset_index())
+        prophmodel = get_prophet_model()
+        model = prophmodel.fit(pd.concat([X_train, y_train], axis=1).reset_index())
         
-        test_predictions.append(model.predict(X_test.reset_index().drop(columns='y')))
+        test_predictions.append(model.predict(X_test.reset_index()))
     
-    test_predictions = np.array(test_predictions).flatten()
-    # samples from the first training iteration don't have any test predictions so should be discarded
-    num_samples_train_first_iteration = X.shape[0] - test_predictions.shape[0]
-    test_predictions = pd.Series(
-        test_predictions, index=X.index[num_samples_train_first_iteration:]
-    )
+    test_predictions = pd.concat(test_predictions)[["ds", "yhat"]]
+    result = test_predictions.rename(columns={"ds":"GAS_DAY", "yhat":"PS_GAM"}).set_index("GAS_DAY")
 
-    return test_predictions
+    prophmodel = get_prophet_model()
+    model = prophmodel.fit(proph_data.reset_index())
+
+    return model, result
+
+
+def get_prophet_model():
+    result = Prophet(daily_seasonality=False, yearly_seasonality=False)
+    result.add_country_holidays(country_name="UK")
+
+    for regressor in PROPHET_FEATURES:
+        result.add_regressor(regressor)
+
+    return result
 
 
 def get_preprocessor():
@@ -108,13 +117,15 @@ def get_preprocessor():
 
 
 def select_features(input_data):
-    base_features = ["WIND_FORECAST", "INTERCONNECTORS", "REST", "POWER_STATION", "DEMAND", "DEMAND"]
-    suffix = ["NEXT_DAY", "PREVIOUS_DAY", "PREVIOUS_DAY", "PREVIOUS_DAY", "NEXT_DAY", "CURRENT_DAY"]
+    base_features = ["WIND_FORECAST", "INTERCONNECTORS", "REST", "POWER_STATION", "WIND", "DEMAND", "DEMAND"]
+    suffix = ["NEXT_DAY", "PREVIOUS_DAY", "PREVIOUS_DAY", "PREVIOUS_DAY","PREVIOUS_DAY", "NEXT_DAY", "CURRENT_DAY"]
     string_mask = [f"{a}_\d*_{b}" for a, b in zip(base_features, suffix)] # i.e. WIND_FORECAST_\d*_NEXT_DAY
     
     mask = input_data.columns.str.contains("|".join(string_mask))
-    result = input_data[mask + ["TED_DA_FORECAST"]].copy()
+    selected_columns = input_data.columns[mask].tolist()
+    result = input_data[selected_columns + ["TED_DA_FORECAST"]].copy()
     return result
+
 
 def train_glm_63(target, features):
     """Train a Linear Regression model based on CWV
