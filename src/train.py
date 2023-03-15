@@ -3,9 +3,118 @@ import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import TimeSeriesSplit
+from sklearn.pipeline import make_pipeline, FeatureUnion
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+from prophet import Prophet
 
 logger = logging.getLogger(__name__)
 
+PROPHET_FEATURES = [
+    "DEMAND_42_NEXT_DAY",
+    "DEMAND_15_NEXT_DAY",
+    "WIND_FORECAST_3_NEXT_DAY",
+    "WIND_FORECAST_29_NEXT_DAY",
+    "DEMAND_19_NEXT_DAY",
+    "DEMAND_9_NEXT_DAY",
+    "WIND_FORECAST_9_NEXT_DAY",
+    "DEMAND_45_NEXT_DAY",
+    "WIND_FORECAST_21_NEXT_DAY",
+    "POWER_STATION_48_PREVIOUS_DAY",
+    "PCA4",
+    "WIND_FORECAST_37_NEXT_DAY",
+    "TED_DA_FORECAST",
+    "DEMAND_13_NEXT_DAY",
+    "DEMAND_17_NEXT_DAY",
+    "DEMAND_12_NEXT_DAY",
+    "PCA5",
+    "DEMAND_10_NEXT_DAY",
+    "DEMAND_44_NEXT_DAY",
+    "WIND_FORECAST_23_NEXT_DAY",
+    "PCA10",
+    "WIND_FORECAST_11_NEXT_DAY",
+    "DEMAND_43_NEXT_DAY",
+    "DEMAND_16_NEXT_DAY",
+    "DEMAND_46_NEXT_DAY",
+    "WIND_FORECAST_47_NEXT_DAY",
+    "WIND_FORECAST_35_NEXT_DAY",
+    "DEMAND_43_CURRENT_DAY",
+    "WIND_FORECAST_25_NEXT_DAY",
+    "WIND_FORECAST_31_NEXT_DAY",
+    "DEMAND_32_NEXT_DAY",
+    "WIND_FORECAST_33_NEXT_DAY",
+]
+
+PROPHET_BASE_FEATS = ["WIND", "DEMAND", "TED_DA_FORECAST", "INTERCONNECTOR", "POWERSTATION", "REST"]
+
+def train_gam(target, features, min_train=30):
+    logger.info("Training prophet model with lots of features")
+        
+    # select features on which to base PCA
+    X = select_features(features)
+    preprocessor = get_preprocessor()
+
+    test_predictions = []
+    nsplits = abs(round((X.index.min() - X.index.max()).days))
+    tscv = TimeSeriesSplit(n_splits=nsplits)
+
+    prophmodel = Prophet(daily_seasonality=False, yearly_seasonality=False)
+    prophmodel.add_country_holidays(country_name="UK")
+
+    for regressor in PROPHET_FEATURES:
+        prophmodel.add_regressor(regressor)
+
+    # fit on training data
+    proph_data = pd.concat([X, target], axis=1).rename({"Y": "y"}, axis=1)
+    proph_data.index.name = "ds"
+    cols = proph_data.columns.tolist() + ["PCA"+str(i) for i in range(13)]
+
+    for train_index, test_index in tscv.split(proph_data):
+
+        if len(train_index) < min_train:
+            continue
+    
+        X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+
+        X_train = pd.DataFrame(preprocessor.fit_transform(X_train), columns=cols, index=X_train.index)
+        X_test = pd.DataFrame(preprocessor.transform(X_test), columns=cols, index=X_test.index)
+
+        model = prophmodel.fit(X_train.reset_index())
+        
+        test_predictions.append(model.predict(X_test.reset_index().drop(columns='y')))
+    
+    test_predictions = np.array(test_predictions).flatten()
+    # samples from the first training iteration don't have any test predictions so should be discarded
+    num_samples_train_first_iteration = X.shape[0] - test_predictions.shape[0]
+    test_predictions = pd.Series(
+        test_predictions, index=X.index[num_samples_train_first_iteration:]
+    )
+
+    return test_predictions
+
+
+def get_preprocessor():
+    pipe = make_pipeline(
+        StandardScaler(),
+        FeatureUnion(
+            transformer_list=[
+                ('pca', PCA(n_components=13)),
+                ('identity', 'passthrough')
+            ]
+        ),
+        StandardScaler()
+    )
+    return pipe
+
+
+def select_features(input_data):
+    base_features = ["WIND_FORECAST", "INTERCONNECTORS", "REST", "POWER_STATION", "DEMAND", "DEMAND"]
+    suffix = ["NEXT_DAY", "PREVIOUS_DAY", "PREVIOUS_DAY", "PREVIOUS_DAY", "NEXT_DAY", "CURRENT_DAY"]
+    string_mask = [f"{a}_\d*_{b}" for a, b in zip(base_features, suffix)] # i.e. WIND_FORECAST_\d*_NEXT_DAY
+    
+    mask = input_data.columns.str.contains("|".join(string_mask))
+    result = input_data[mask + ["TED_DA_FORECAST"]].copy()
+    return result
 
 def train_glm_63(target, features):
     """Train a Linear Regression model based on CWV
