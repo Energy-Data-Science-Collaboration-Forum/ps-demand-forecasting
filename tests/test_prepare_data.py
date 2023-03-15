@@ -435,36 +435,36 @@ def test_aggregate_generation_data():
 def test_prepare_hourly_wind_forecast(monkeypatch):
     mock_data = pd.DataFrame(
         {
-            "GAS_DAY": ["2021-01-11"] * 24,
-            "ELEC_DAY": ["2021-01-11"] * 24,
-            "SP": [(2 * n + 1) for n in range(24)],  # get all odd numbers up to 48
-            "ORIGI": [9] * 24,
-            "FINAL": [10] * 24,
-            "OUT": [8] * 24,
-            "CREATED_ON": ["2021-01-08 10:00:00"] * 24,
-            "RUNID": ["123"] * 24,
+            "startTime": ["2021-01-11"] * 24,
+            "generation": [10] * 24,
+            "publishTime": ["2021-01-08T10:00:00Z"] * 24,
+            "sp": range(0,24),
         }
     )
 
+    mock_data["startTime"] = pd.to_datetime(mock_data["startTime"]) + pd.Timedelta("1 hour") * mock_data["sp"]
+    mock_data["startTime"] = mock_data["startTime"].dt.strftime(date_format="%Y-%m-%dT%H:%M:%SZ")
+
     # add data that is too recent so will be cutoff
     dup = mock_data.copy()
-    dup["CREATED_ON"] = dup["ELEC_DAY"]
+    dup["publishTime"] = pd.to_datetime(dup["publishTime"]).dt.floor(freq='H').dt.strftime("%Y-%m-%dT%H:%M:%SZ")
     mock_data = mock_data.append(dup)
 
     # add data with a slightly later created date
     dup = mock_data.copy()
-    dup["CREATED_ON"] = (
-        pd.to_datetime(dup["CREATED_ON"]) + pd.Timedelta("30 minutes")
-    ).dt.strftime("%Y-%m-%d %H:%M:%S")
-    dup["FINAL"] = dup["FINAL"] + 10
+    dup["publishTime"] = (
+        pd.to_datetime(dup["publishTime"]) + pd.Timedelta("30 minutes")
+    ).dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+    dup["generation"] = dup["generation"] + 10
     mock_data = mock_data.append(dup)
 
     # add data with not enough settlement periods
     dup2 = dup.copy()
-    dup2["GAS_DAY"] = "2021-01-12"
-    dup2["ELEC_DAY"] = "2021-01-12"
-    dup2 = dup2.iloc[-1]
-    mock_data = mock_data.append(dup2)
+    dup2["startTime"] = "2021-01-12"
+    dup2["startTime"] = pd.to_datetime(dup2["startTime"]) + pd.Timedelta("1 hour") * dup2["sp"]
+    dup2["startTime"] = dup2["startTime"].dt.strftime(date_format="%Y-%m-%dT%H:%M:%SZ")
+    dup2 = dup2.iloc[:-1, :]
+    mock_data = mock_data.append(dup2).drop(columns="sp")
 
 
     def mock_read_csv(fp):        

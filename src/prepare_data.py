@@ -122,15 +122,30 @@ def prepare_hourly_wind_forecast(file_path):
     """
     windf = pd.read_csv(file_path)
 
-    # wrangle
-    for col in ["GAS_DAY", "CREATED_ON", "ELEC_DAY"]:
-        windf[col] = pd.to_datetime(windf[col])
+    windf = windf.rename(
+        columns={
+            "startTime": "ELEC_DATETIME",
+            "publishTime": "CREATED_ON",
+            "generation": "WIND_FORECAST",
+        }
+    )
 
-    windf = windf.rename({"SP": "SETTLEMENT_PERIOD"}, axis=1)
+    for col in ["ELEC_DATETIME", "CREATED_ON"]:
+        windf[col] = (
+            pd.to_datetime(windf[col])
+            .dt.tz_convert("Europe/London")
+            .dt.tz_localize(None)
+        )
+    windf["ELEC_DAY"] = windf["ELEC_DATETIME"].dt.date
 
-    windf["ELEC_DATETIME"] = windf["ELEC_DAY"] + (
-        windf["SETTLEMENT_PERIOD"] - 1
-    ) * pd.Timedelta("30 min")
+    windf["GAS_DAY"] = windf["ELEC_DATETIME"].apply(
+        lambda edt: infer_gas_day(None, None, actual_datetime=edt)
+    )
+    windf["GAS_DAY"] = pd.to_datetime(windf["GAS_DAY"])
+
+    windf["SETTLEMENT_PERIOD"] = windf["ELEC_DATETIME"].apply(
+        lambda dt: (dt.hour * 2 + 1) + (dt.minute // 30)
+    )
 
     ## not adding horizon days because we're using the day ahead forecasts for all horizons
     windf = cutoff_forecast(windf)
@@ -140,17 +155,16 @@ def prepare_hourly_wind_forecast(file_path):
     windf = windf.groupby(["ELEC_DATETIME"]).last().reset_index()
 
     windf = remove_incomplete_settlement_periods(
-        "DFM_ELXN_WIND_OT", windf, hourly_settlement_periods=True
+        "WIND FORECAST", windf, hourly_settlement_periods=True
     )
     windf = fill_46_settlement_period(windf, hourly_settlement_periods=True)
     windf = (
         windf
-        .drop(columns=['ELEC_DATETIME', 'ORIGI', 'OUT', 'CREATED_ON', 'RUNID'])
+        .drop(columns=['ELEC_DATETIME', 'CREATED_ON'])
         .groupby(["GAS_DAY", "ELEC_DAY", "SETTLEMENT_PERIOD"])
         .last()
         .reset_index()
-        .drop(columns=['ELEC_DAY'])
-        .rename(columns={'FINAL': 'WIND_FORECAST'})
+        .drop(columns=["ELEC_DAY"])
         )
     result = flatten_data(windf)
     return result
