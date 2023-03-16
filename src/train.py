@@ -87,7 +87,10 @@ def train_gam(target, features, min_train=30):
     result = test_predictions.rename(columns={"ds":"GAS_DAY", "yhat":"PS_GAM"}).set_index("GAS_DAY")
 
     prophmodel = get_prophet_model()
-    model = prophmodel.fit(proph_data.reset_index())
+    X_train = pd.DataFrame(preprocessor.fit_transform(proph_data.drop(columns="y")), columns=cols)
+    X_train["y"] = proph_data["y"].values
+    X_train["ds"] = proph_data.index.values
+    model = prophmodel.fit(X_train)
 
     return model, result
 
