@@ -1,8 +1,16 @@
 import datetime as dt
+import numpy as np
 import pandas as pd
 from pandas.testing import assert_frame_equal
-from src.utils import remove_incomplete_settlement_periods, cutoff_forecast, infer_gas_day, remove_zero_ccgt
-
+from src.utils import (
+    remove_incomplete_settlement_periods,
+    cutoff_forecast,
+    infer_gas_day,
+    remove_zero_ccgt,
+    flatten_data,
+    fill_46_settlement_period,
+    remove_50_settlement_period,
+)
 
 
 def test_infer_gas_day():
@@ -98,6 +106,7 @@ def test_cutoff_forecast_normal():
 
     assert_frame_equal(result, expected)
 
+
 def test_cutoff_forecast_time_of_day_fix():
     my_data = pd.DataFrame(
         {
@@ -118,6 +127,7 @@ def test_cutoff_forecast_time_of_day_fix():
     )
 
     assert_frame_equal(result, expected)
+
 
 def test_remove_incomplete_settlement_periods_complete(caplog):
     dummy_data = pd.DataFrame(
@@ -262,9 +272,102 @@ def test_remove_zero_ccgt(caplog):
     desired_result = pd.DataFrame({"One": [1, 2], "CCGT": [1, 2]})
 
     assert_frame_equal(result, desired_result)
-    
+
     assert len(caplog.records) == 1
     assert (
         caplog.records[0].getMessage()
         == "Dummy has 1 Settlement Periods with 0 value CCGT, dropped those Settlement Periods"
     )
+
+
+def test_flatten_data():
+    mock_data = pd.DataFrame(
+        {
+            "GAS_DAY": ["2021-01-11"] * 48 + ["2021-01-12"] * 48,
+            "SETTLEMENT_PERIOD": list(range(1, 49)) * 2,
+            "WIND": [11] * 48 + [22] * 48,
+        },
+    )
+
+    result = flatten_data(mock_data)
+
+    desired_result = pd.DataFrame(
+        index=["2021-01-11", "2021-01-12"],
+        columns=[f"WIND_{number}" for number in range(1, 49)],
+    )
+    desired_result.index.name = "GAS_DAY"
+    desired_result.loc["2021-01-11"] = 11
+    desired_result.loc["2021-01-12"] = 22
+    desired_result = desired_result.astype(
+        {"WIND_{number}".format(number=number): np.int64 for number in range(1, 49)}
+    )
+
+    assert_frame_equal(result, desired_result)
+
+
+def test_fill_46_settlement_period():
+    # Test data
+    mock_gen_data = pd.DataFrame(
+        {
+            "ELEC_DAY": ["2021-01-11"] * 46,
+            "GAS_DAY": ["2021-01-11"] * 46,
+            "CREATED_ON": ["2021-01-10 12:00:00"] * 46,
+            "SETTLEMENT_PERIOD": range(1, 47),
+            "COAL": [1.0] * 46,
+            "WIND": [1.0] * 46,
+            "CCGT": [1.0] + [3, 4] + [1.0] * 43,
+        }
+    )
+
+    # Expected output
+    expected_output = pd.DataFrame(
+        {
+            "ELEC_DAY": ["2021-01-11"] * 48,
+            "SETTLEMENT_PERIOD": range(1, 49),
+            "GAS_DAY": ["2021-01-11"] * 48,
+            "CREATED_ON": ["2021-01-10 12:00:00"] * 48,
+            "COAL": [1.0] * 48,
+            "WIND": [1.0] * 48,
+            "CCGT": [1.0] + [3, 3, 4, 4] + [1.0] * 43,
+        }
+    )
+
+    # Test function
+    output = fill_46_settlement_period(mock_gen_data)
+
+    # Assert that the output is as expected
+    assert_frame_equal(output, expected_output)
+
+
+def test_remove_50_settlement_period():
+    # Test data
+    mock_gen_data = pd.DataFrame(
+        {
+            "ELEC_DAY": ["2021-01-11"] * 50,
+            "GAS_DAY": ["2021-01-11"] * 50,
+            "CREATED_ON": ["2021-01-10 12:00:00"] * 50,
+            "SETTLEMENT_PERIOD": range(1, 51),
+            "COAL": [1.0] * 50,
+            "WIND": [1.0] * 50,
+            "CCGT": [1.0] * 2 + [6, 5, 2, 4] + [6.0] * 44,
+        }
+    )
+
+    # Expected output
+    expected_output = pd.DataFrame(
+        {
+            "ELEC_DAY": ["2021-01-11"] * 48,
+            "SETTLEMENT_PERIOD": range(1, 49),
+            "GAS_DAY": ["2021-01-11"] * 48,
+            "CREATED_ON": ["2021-01-10 12:00:00"] * 48,
+            "COAL": [1.0] * 48,
+            "WIND": [1.0] * 48,
+            "CCGT": [1.0] * 2 + [4.0, 4.5] + [6.0] * 44,
+        }
+    )
+
+    # Test function
+    output = remove_50_settlement_period(mock_gen_data)
+
+    # Assert that the output is as expected
+    assert_frame_equal(output, expected_output)

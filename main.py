@@ -7,7 +7,7 @@ from src.prepare_data import (
     prepare_gas_demand_actuals,
     prepare_electricity_features,
 )
-from src.train import train_glm_63
+from src.train import train_glm_63, train_gam
 from src.evaluate import evaluate_models
 
 logger = logging.getLogger(__name__)
@@ -19,6 +19,7 @@ FEATURES = {
     "TED": "data/elexon_ted_forecast_sample.csv",
     "WIND": "data/elexon_wind_forecast_sample.csv",
     "ACTUAL_D_SOFAR_ALL_BUT_WIND_GT": "data/elexon_electricity_actuals_sample.csv",
+    "ELECTRICITY_ACTUALS": "data/elexon_electricity_actuals_sample.csv",
 }
 ACTUALS = {"GAS": "data/gas_actuals_sample.csv"}
 
@@ -34,7 +35,18 @@ ps_63_model, ps_63_cv_predictions = train_glm_63(
 )
 joblib.dump(ps_63_model, f"data/ps_model_{dt.now().strftime(format=FORMAT)}.joblib")
 
-model_performance = evaluate_models(ps_63_cv_predictions.to_frame(), ps_demand_actuals)
+ps_gam_model, ps_gam_predictions = train_gam(ps_demand_actuals, electricity_features)
+joblib.dump(ps_gam_model, f"data/ps_model_{dt.now().strftime(format=FORMAT)}.joblib")
+
+all_predictions = pd.concat(
+    [
+        ps_63_cv_predictions.to_frame(),
+        ps_gam_predictions
+    ],
+    axis=1,
+)
+
+model_performance = evaluate_models(all_predictions, ps_demand_actuals)
 model_performance.to_csv(
     f"data/model_performance_{dt.now().strftime(format=FORMAT)}.csv", index=False
 )
