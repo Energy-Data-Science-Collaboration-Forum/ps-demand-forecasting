@@ -496,6 +496,7 @@ def test_prepare_hourly_wind_forecast(monkeypatch):
     dup2["startTime"] = dup2["startTime"].dt.strftime(date_format="%Y-%m-%dT%H:%M:%SZ")
     dup2 = dup2.iloc[:-1, :]
     mock_data = mock_data.append(dup2).drop(columns="sp")
+    mock_data['dataset'] = 'dummy'
 
     def mock_read_csv(fp):
         return mock_data
