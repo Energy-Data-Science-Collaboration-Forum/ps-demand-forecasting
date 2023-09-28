@@ -17,7 +17,10 @@ jobs:
 
     - name: Install dependencies
       run: pip install -r requirements.txt
-
+    
+    - name: Install prophet
+      run: pip install prophet==1.0.1
+    
     - name: Run pytest
       run: python -m pytest --junitxml=junit/unit-test.xml
     
