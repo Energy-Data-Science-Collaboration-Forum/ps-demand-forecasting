@@ -1,6 +1,9 @@
 name: Train Models
 
 on:
+  push:
+      branches:
+        - 'train-models'
   workflow_dispatch: {}
   schedule:
     - cron: '0 5 * * 2' # This cron schedule runs every Tuesday at 5 AM (UTC)
