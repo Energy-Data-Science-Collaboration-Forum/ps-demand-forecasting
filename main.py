@@ -33,10 +33,10 @@ electricity_features = prepare_electricity_features(FEATURES)
 ps_63_model, ps_63_cv_predictions = train_glm_63(
     ps_demand_actuals, electricity_features
 )
-joblib.dump(ps_63_model, f"data/ps_model_{dt.now().strftime(format=FORMAT)}.joblib")
+joblib.dump(ps_63_model, f"data/ps_63_model.joblib")
 
 ps_gam_model, ps_gam_predictions = train_gam(ps_demand_actuals, electricity_features)
-joblib.dump(ps_gam_model, f"data/ps_model_{dt.now().strftime(format=FORMAT)}.joblib")
+joblib.dump(ps_gam_model, f"data/ps_gam_model.joblib")
 
 all_predictions = pd.concat(
     [

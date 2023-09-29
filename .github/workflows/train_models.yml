@@ -26,4 +26,14 @@ jobs:
     
     - name: Run main.py
       run: python main.py
-    
+
+    - name: Upload 63 model
+      uses: actions/upload-artifact@v2
+      with:
+        name: ps-63
+        path: data/ps_63_model.joblib
+    - name: Upload GAM model
+      uses: actions/upload-artifact@v2
+      with:
+        name: ps-gam
+        path: data/ps_gam_model.joblib
