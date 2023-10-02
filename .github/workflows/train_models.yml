@@ -18,7 +18,10 @@ jobs:
 
     - name: Check commit message
       run: |
-        if git log -1 --pretty=%B | grep -q "AUTO"; then exit 0 fi
+        if git log -1 --pretty=%B | grep -q "AUTO"; 
+          then 
+            exit 0 
+        fi
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
