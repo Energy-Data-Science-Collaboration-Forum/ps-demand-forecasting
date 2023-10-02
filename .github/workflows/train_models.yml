@@ -37,3 +37,11 @@ jobs:
       with:
         name: ps-gam
         path: data/ps_gam_model.joblib
+    - name: Update README
+      run: |
+        python update_readme.py
+        git add results.md
+        git commit -m "Updated results"        
+
+    - name: Push changes
+      run: git push origin train-models
