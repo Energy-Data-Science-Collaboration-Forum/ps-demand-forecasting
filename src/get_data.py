@@ -191,7 +191,9 @@ def get_elexon_data_from_api(name, input_url, from_date, to_date):
 
 if __name__ == "__main__":
     data_dir = "data"
-    get_gas_actuals_from_mipi(data_dir, "2019-01-01", "2023-07-31")
-    get_ted_forecast_from_elexon(data_dir, "2019-01-01", "2023-07-31")
-    get_wind_forecast_from_elexon(data_dir, "2019-01-01", "2023-07-31")
-    get_electricity_actuals_from_elexon(data_dir, "2019-01-01", "2023-07-31")
+    from_date = "2019-01-01"
+    to_date = dt.datetime.now().strftime("%Y-%m-%d") # today
+    get_gas_actuals_from_mipi(data_dir, from_date, to_date)
+    get_ted_forecast_from_elexon(data_dir, from_date, to_date)
+    get_wind_forecast_from_elexon(data_dir, from_date, to_date)
+    get_electricity_actuals_from_elexon(data_dir, from_date, to_date)
