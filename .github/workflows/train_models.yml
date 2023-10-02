@@ -16,7 +16,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    - name: Check commit message
+    - name: Check commit message # only run if this is a genuine commit
       run: |
         if git log -1 --pretty=%B | grep -q "AUTO"; 
           then 
@@ -31,7 +31,9 @@ jobs:
       run: pip install -r requirements.txt
     
     - name: Run main.py
-      run: python main.py
+      run: |
+        python src/get_data.py
+        python main.py
 
     - name: Upload 63 model
       uses: actions/upload-artifact@v2
