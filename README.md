@@ -16,14 +16,14 @@ conda create -f environment.yml
 conda activate gas_demand_forecasting
 ```
 
-We have included sample data files with made up data in the _data_ folder to get you started. Full versions of these datasets are publicly available, please view the README in the _data_ folder for instructions on how to get them. Once you have downloaded new datasets be sure to update the `main.py` script with their name.
+We have included sample data files with made up data in the _data_ folder to get you started. Full versions of these datasets are publicly available, please view the README in the _data_ folder for instructions on how to get them. If you wish to run with the sample data be sure to update the `main.py` script with their name. 
 
 
 ## Run Model Training
 
 The demand forecast we publish is for the entire network, i.e. the National Transmission System (NTS). However to create this forecast we first look at the distinct components that make up the NTS. The largest two are Powerstations (PS) and Local Distribution Zones (LDZ). Here we include code to create a model for **PS** gas demand. 
 
-Once your environment is setup you can run `python main.py` from the command line to re-run the training and calculate model performance. 
+Once your environment is setup you can run `python main.py` from the command line to re-run the training and calculate model performance. Please note that the models are also automatically trained as per the schedule in *.github/workflows/train_models.yml*.
 
 ## Results
 
