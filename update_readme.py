@@ -23,7 +23,7 @@ updated_readme_content = (
     + "\n\n"
     + markdown_table
     + "\n\n"
-    + readme_content[end_insert_section:]
+    + readme_content[end_insert_index:]
 )
 
 with open(readme_file, 'w') as file:
