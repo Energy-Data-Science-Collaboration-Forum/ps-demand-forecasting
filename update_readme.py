@@ -4,9 +4,9 @@ import pandas as pd
 today_one = dt.datetime.now().strftime("%d %B %Y")
 performance_results = pd.read_csv("data/model_performance.csv")
 
-markdown_table = performance_results.to_markdown(index=False)
+markdown_table = performance_results.round(2).to_markdown(index=False)
 
-readme_file = "results.md"
+readme_file = "README.md"
 insert_section = "## Results"
 end_insert_section = "## Contributing"
 

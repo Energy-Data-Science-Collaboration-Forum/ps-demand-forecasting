@@ -1,9 +1,6 @@
 name: Train Models
 
 on:
-  push:
-     branches:
-       - 'train-models'
   workflow_dispatch: {}
   schedule:
     - cron: '0 5 * * 2' # This cron schedule runs every Tuesday at 5 AM (UTC)
@@ -50,8 +47,8 @@ jobs:
         python update_readme.py
         git config user.name github-actions
         git config user.email github-actions@github.com
-        git add results.md
-        git commit -m "AUTO: Updated results"        
+        git add README.md
+        git commit -m "AUTO: Updated performance results"        
 
     - name: Push changes
       run: git push origin "${{ github.ref }}" # push to the current branch
