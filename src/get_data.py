@@ -42,7 +42,7 @@ def get_gas_actuals_from_mipi(output_dir, from_date, to_date):
         df = df.rename(columns={"DATA_ITEM": "TYPE"})
         df["Value"] = pd.to_numeric(df["Value"])
         df.to_csv(
-            path.join(output_dir, f"gas_actuals_{dt.datetime.now().strftime(FORMAT)}.csv"),
+            path.join(output_dir, "gas_actuals.csv"),
             index=False,
         )
     else:
@@ -107,7 +107,7 @@ def get_ted_forecast_from_elexon(output_dir, from_date, to_date):
     if len(result) > 0:
         result = pd.concat(result)
         result.to_csv(
-            f"data/elexon_ted_forecast_{dt.datetime.now().strftime(FORMAT)}.csv",
+            path.join(output_dir, "elexon_ted_forecast.csv"),
             index=False,
         )
 
@@ -126,7 +126,7 @@ def get_wind_forecast_from_elexon(output_dir, from_date, to_date):
     if len(result) > 0:
         result = pd.concat(result)
         result.to_csv(
-            path.join(output_dir, f"elexon_wind_forecast_{dt.datetime.now().strftime(FORMAT)}.csv"),
+            path.join(output_dir, "elexon_wind_forecast.csv"),
             index=False,
         )
 
@@ -137,7 +137,7 @@ def get_electricity_actuals_from_elexon(output_dir, from_date, to_date):
     if len(result) > 0:
         result = pd.concat(result)
         result.to_csv(
-            path.join(output_dir, f"elexon_electricity_actuals_{dt.datetime.now().strftime(FORMAT)}.csv"),
+            path.join(output_dir, "elexon_electricity_actuals.csv"),
             index=False,
         )
 
@@ -191,7 +191,9 @@ def get_elexon_data_from_api(name, input_url, from_date, to_date):
 
 if __name__ == "__main__":
     data_dir = "data"
-    get_gas_actuals_from_mipi(data_dir, "2022-01-01", "2022-07-01")
-    get_ted_forecast_from_elexon(data_dir, "2022-01-01", "2022-07-01")
-    get_wind_forecast_from_elexon(data_dir, "2022-01-01", "2022-07-01")
-    get_electricity_actuals_from_elexon(data_dir, "2022-01-01", "2022-07-01")
+    from_date = "2019-01-01"
+    to_date = dt.datetime.now().strftime("%Y-%m-%d") # today
+    get_gas_actuals_from_mipi(data_dir, from_date, to_date)
+    get_ted_forecast_from_elexon(data_dir, from_date, to_date)
+    get_wind_forecast_from_elexon(data_dir, from_date, to_date)
+    get_electricity_actuals_from_elexon(data_dir, from_date, to_date)

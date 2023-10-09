@@ -16,12 +16,12 @@ logging.basicConfig(format="%(asctime)s %(levelname)s: %(message)s", level=loggi
 FORMAT = "%Y%m%d_%H%M%S"
 
 FEATURES = {
-    "TED": "data/elexon_ted_forecast_sample.csv",
-    "WIND": "data/elexon_wind_forecast_sample.csv",
-    "ACTUAL_D_SOFAR_ALL_BUT_WIND_GT": "data/elexon_electricity_actuals_sample.csv",
-    "ELECTRICITY_ACTUALS": "data/elexon_electricity_actuals_sample.csv",
+    "TED": "data/elexon_ted_forecast.csv",
+    "WIND": "data/elexon_wind_forecast.csv",
+    "ACTUAL_D_SOFAR_ALL_BUT_WIND_GT": "data/elexon_electricity_actuals.csv",
+    "ELECTRICITY_ACTUALS": "data/elexon_electricity_actuals.csv",
 }
-ACTUALS = {"GAS": "data/gas_actuals_sample.csv"}
+ACTUALS = {"GAS": "data/gas_actuals.csv"}
 
 logger.info("Preprocessing actual gas demand")
 gas_demand_actuals = prepare_gas_demand_actuals(ACTUALS["GAS"])
@@ -33,10 +33,10 @@ electricity_features = prepare_electricity_features(FEATURES)
 ps_63_model, ps_63_cv_predictions = train_glm_63(
     ps_demand_actuals, electricity_features
 )
-joblib.dump(ps_63_model, f"data/ps_model_{dt.now().strftime(format=FORMAT)}.joblib")
+joblib.dump(ps_63_model, "data/ps_63_model.joblib")
 
 ps_gam_model, ps_gam_predictions = train_gam(ps_demand_actuals, electricity_features)
-joblib.dump(ps_gam_model, f"data/ps_model_{dt.now().strftime(format=FORMAT)}.joblib")
+joblib.dump(ps_gam_model, "data/ps_gam_model.joblib")
 
 all_predictions = pd.concat(
     [
@@ -48,7 +48,7 @@ all_predictions = pd.concat(
 
 model_performance = evaluate_models(all_predictions, ps_demand_actuals)
 model_performance.to_csv(
-    f"data/model_performance_{dt.now().strftime(format=FORMAT)}.csv", index=False
+    "data/model_performance.csv", index=False
 )
 
 print(model_performance)

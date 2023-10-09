@@ -1,6 +1,6 @@
 # Gathering Data
 
-Previous explorations of the data have shown that historical trends in gas demand do not change significantly. We have therefor chosen to limit historical data to the period from January 2019 up to November 2022. 
+Previous explorations of the data have shown that historical trends in gas demand do not change significantly. We have therefor chosen to limit historical data to the period from January 2019 onwards. 
 
 If you managed to create your python environment as per the instructions in the main _README.md_ then you are ready to now also collect the data. Simply run `python src/get_data.py` and it will gather the necessary datasets and place them in the **data** folder.
 
