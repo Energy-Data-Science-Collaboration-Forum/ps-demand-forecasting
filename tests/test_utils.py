@@ -34,15 +34,15 @@ def test_infer_gas_day():
 
     # if negative (impossible value)
     gas_day = infer_gas_day(-1, today)
-    assert gas_day == today - dt.timedelta(days=1)
+    assert pd.isna(gas_day)
 
     # if zero settlement period
     gas_day = infer_gas_day(0, today)
-    assert gas_day == today - dt.timedelta(days=1)
+    assert pd.isna(gas_day)
 
     # date with time detail
     now = dt.datetime.now()
-    gas_day = infer_gas_day(0, now)
+    gas_day = infer_gas_day(10, now)
     assert gas_day == now - dt.timedelta(days=1)
 
 
