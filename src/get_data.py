@@ -1,14 +1,13 @@
-import logging
 import datetime as dt
+import logging
+from os import path
+
 import pandas as pd
 import requests
-from os import path
 from requests import Session
-
 from zeep import Client
 from zeep.helpers import serialize_object
 from zeep.transports import Transport
-
 
 logger = logging.getLogger(__name__)
 
@@ -102,7 +101,9 @@ def get_ted_forecast_from_elexon(output_dir, from_date, to_date):
         from_date (str): Lower bound for the published date of the dataset, yyyy-mm-dd format
         to_date (str): Upper bound for the published date of the dataset, yyyy-mm-dd format
     """
-    result = get_elexon_data_from_api("TED Forecast", ELEXON_TED_URL, from_date, to_date)
+    result = get_elexon_data_from_api(
+        "TED Forecast", ELEXON_TED_URL, from_date, to_date
+    )
 
     if len(result) > 0:
         result = pd.concat(result)
@@ -121,7 +122,9 @@ def get_wind_forecast_from_elexon(output_dir, from_date, to_date):
         from_date (str): Lower bound for the published date of the dataset, yyyy-mm-dd format
         to_date (str): Upper bound for the published date of the dataset, yyyy-mm-dd format
     """
-    result = get_elexon_data_from_api("Wind Forecast", ELEXON_WIND_URL, from_date, to_date)
+    result = get_elexon_data_from_api(
+        "Wind Forecast", ELEXON_WIND_URL, from_date, to_date
+    )
 
     if len(result) > 0:
         result = pd.concat(result)
@@ -132,7 +135,9 @@ def get_wind_forecast_from_elexon(output_dir, from_date, to_date):
 
 
 def get_electricity_actuals_from_elexon(output_dir, from_date, to_date):
-    result = get_elexon_data_from_api("Electricity Actuals", ELEXON_ELEC_GEN_URL, from_date, to_date)
+    result = get_elexon_data_from_api(
+        "Electricity Actuals", ELEXON_ELEC_GEN_URL, from_date, to_date
+    )
 
     if len(result) > 0:
         result = pd.concat(result)
@@ -173,7 +178,7 @@ def get_elexon_data_from_api(name, input_url, from_date, to_date):
         url = (
             input_url
             + f"publishDateTimeFrom={from_dt}&publishDateTimeTo={to_dt}&format=json"
-        )       
+        )
 
         response = requests.get(url, headers=hdr)
 
@@ -192,7 +197,7 @@ def get_elexon_data_from_api(name, input_url, from_date, to_date):
 if __name__ == "__main__":
     data_dir = "data"
     from_date = "2019-01-01"
-    to_date = dt.datetime.now().strftime("%Y-%m-%d") # today
+    to_date = dt.datetime.now().strftime("%Y-%m-%d")  # today
     get_gas_actuals_from_mipi(data_dir, from_date, to_date)
     get_ted_forecast_from_elexon(data_dir, from_date, to_date)
     get_wind_forecast_from_elexon(data_dir, from_date, to_date)

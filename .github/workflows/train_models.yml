@@ -15,9 +15,9 @@ jobs:
 
     - name: Check commit message # only run if this is a genuine commit
       run: |
-        if git log -1 --pretty=%B | grep -q "AUTO"; 
-          then 
-            exit 0 
+        if git log -1 --pretty=%B | grep -q "AUTO";
+          then
+            exit 0
         fi
     - name: Set up Python
       uses: actions/setup-python@v2
@@ -26,7 +26,7 @@ jobs:
 
     - name: Install dependencies
       run: pip install -r requirements.txt
-    
+
     - name: Run main.py
       run: |
         python src/get_data.py
@@ -48,7 +48,7 @@ jobs:
         git config user.name github-actions
         git config user.email github-actions@github.com
         git add README.md
-        git commit -m "AUTO: Updated performance results"        
+        git commit -m "AUTO: Updated performance results"
 
     - name: Push changes
       run: git push origin "${{ github.ref }}" # push to the current branch

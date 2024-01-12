@@ -1,7 +1,8 @@
+import datetime as dt
 import logging
+
 import numpy as np
 import pandas as pd
-import datetime as dt
 from pandas.api.types import is_numeric_dtype
 
 logger = logging.getLogger(__name__)
@@ -263,8 +264,10 @@ def fix_missing_values(input_data):
     input_data = input_data.dropna()
 
     # now complete the timeseries
-    input_data = input_data.reindex(pd.date_range(input_data.index.min(), input_data.index.max()))
+    input_data = input_data.reindex(
+        pd.date_range(input_data.index.min(), input_data.index.max())
+    )
     # our best guess is yesterday's value
-    input_data = input_data.fillna(method='ffill')
+    input_data = input_data.fillna(method="ffill")
 
     return input_data

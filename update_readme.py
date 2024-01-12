@@ -1,4 +1,5 @@
 import datetime as dt
+
 import pandas as pd
 
 today_one = dt.datetime.now().strftime("%d %B %Y")
@@ -26,5 +27,5 @@ updated_readme_content = (
     + readme_content[end_insert_index:]
 )
 
-with open(readme_file, 'w') as file:
+with open(readme_file, "w") as file:
     file.write(updated_readme_content)

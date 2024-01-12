@@ -14,7 +14,7 @@ def evaluate_models(predictions, actuals):
         )
         .groupby("MODEL")
         .apply(lambda df: calculate_metrics(df))
-        .reset_index()        
+        .reset_index()
     )
 
     return result
@@ -24,4 +24,4 @@ def calculate_metrics(input_data):
     mae = mean_absolute_error(input_data["PS"], input_data["PREDICTIONS"])
     mape = mean_absolute_percentage_error(input_data["PS"], input_data["PREDICTIONS"])
 
-    return pd.Series({"MAE":mae, "MAPE":mape})
+    return pd.Series({"MAE": mae, "MAPE": mape})

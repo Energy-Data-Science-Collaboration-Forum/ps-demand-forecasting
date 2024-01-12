@@ -1,16 +1,12 @@
 import datetime as dt
+
 import numpy as np
 import pandas as pd
 
-from src.utils import (
-    cutoff_forecast,
-    remove_incomplete_settlement_periods,
-    infer_gas_day,
-    remove_zero_ccgt,
-    fill_46_settlement_period,
-    remove_50_settlement_period,
-    flatten_data,
-)
+from src.utils import (cutoff_forecast, fill_46_settlement_period,
+                       flatten_data, infer_gas_day,
+                       remove_50_settlement_period,
+                       remove_incomplete_settlement_periods, remove_zero_ccgt)
 
 
 def prepare_electricity_features(file_paths):
@@ -64,14 +60,14 @@ def prepare_ted_half_hourly_forecast(file_path, days=1):
     name = "TED_DA_HALF_HOURLY"
 
     demand = pd.read_csv(file_path)
-    
+
     demand = demand.rename(
         columns={
             "startTime": "ELEC_DATETIME",
             "publishTime": "CREATED_ON",
             "demand": "DEMAND",
             "settlementPeriod": "SETTLEMENT_PERIOD",
-            "settlementDate": "ELEC_DAY"
+            "settlementDate": "ELEC_DAY",
         }
     )
 
@@ -103,15 +99,10 @@ def prepare_ted_half_hourly_forecast(file_path, days=1):
 
     demand = fill_46_settlement_period(demand)
     demand = (
-        (
-            demand[
-                demand.groupby(["GAS_DAY"])["SETTLEMENT_PERIOD"].transform("count")
-                == 48
-            ]
-        )
-        [["GAS_DAY", "ELEC_DAY", "SETTLEMENT_PERIOD", "DEMAND"]]
-        .reset_index(drop=True)
-    )
+        demand[
+            demand.groupby(["GAS_DAY"])["SETTLEMENT_PERIOD"].transform("count") == 48
+        ]
+    )[["GAS_DAY", "ELEC_DAY", "SETTLEMENT_PERIOD", "DEMAND"]].reset_index(drop=True)
 
     # Note that the data are not continuous in GAS_DAY
     demand_forecast = (
@@ -125,7 +116,9 @@ def prepare_ted_half_hourly_forecast(file_path, days=1):
         .drop(columns="ELEC_DAY")
     )
     # change SETTLEMENT_PERIOD to int64 type
-    demand_forecast["SETTLEMENT_PERIOD"] = demand_forecast["SETTLEMENT_PERIOD"].astype("int64")
+    demand_forecast["SETTLEMENT_PERIOD"] = demand_forecast["SETTLEMENT_PERIOD"].astype(
+        "int64"
+    )
     result = flatten_data(demand_forecast)
     return result
 
