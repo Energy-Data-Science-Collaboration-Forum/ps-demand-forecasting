@@ -4,8 +4,11 @@ import pandas as pd
 from pandas.testing import assert_frame_equal
 
 import src.get_data
-from src.get_data import (get_elexon_data_from_api, get_gas_actuals_from_mipi,
-                          get_mipi_data)
+from src.get_data import (
+    get_elexon_data_from_api,
+    get_gas_actuals_from_mipi,
+    get_mipi_data,
+)
 
 
 def test_get_mipi_data_no_data(monkeypatch, caplog):

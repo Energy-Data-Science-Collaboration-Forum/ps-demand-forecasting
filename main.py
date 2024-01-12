@@ -4,8 +4,7 @@ import joblib
 import pandas as pd
 
 from src.evaluate import evaluate_models
-from src.prepare_data import (prepare_electricity_features,
-                              prepare_gas_demand_actuals)
+from src.prepare_data import prepare_electricity_features, prepare_gas_demand_actuals
 from src.train import train_gam, train_glm_63
 
 logger = logging.getLogger(__name__)

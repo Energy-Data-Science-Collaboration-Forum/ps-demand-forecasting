@@ -3,14 +3,17 @@ import pandas as pd
 from pandas.testing import assert_frame_equal
 
 import src.prepare_data
-from src.prepare_data import (aggregate_generation_data, prepare_actual_sofar,
-                              prepare_electricity_actuals,
-                              prepare_gas_demand_actuals,
-                              prepare_gen_previous_gas_day,
-                              prepare_hourly_wind_forecast,
-                              prepare_ted_forecast,
-                              prepare_ted_half_hourly_forecast,
-                              prepare_wind_forecast)
+from src.prepare_data import (
+    aggregate_generation_data,
+    prepare_actual_sofar,
+    prepare_electricity_actuals,
+    prepare_gas_demand_actuals,
+    prepare_gen_previous_gas_day,
+    prepare_hourly_wind_forecast,
+    prepare_ted_forecast,
+    prepare_ted_half_hourly_forecast,
+    prepare_wind_forecast,
+)
 
 
 def test_prepare_gas_demand_actuals(monkeypatch):

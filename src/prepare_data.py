@@ -3,10 +3,15 @@ import datetime as dt
 import numpy as np
 import pandas as pd
 
-from src.utils import (cutoff_forecast, fill_46_settlement_period,
-                       flatten_data, infer_gas_day,
-                       remove_50_settlement_period,
-                       remove_incomplete_settlement_periods, remove_zero_ccgt)
+from src.utils import (
+    cutoff_forecast,
+    fill_46_settlement_period,
+    flatten_data,
+    infer_gas_day,
+    remove_50_settlement_period,
+    remove_incomplete_settlement_periods,
+    remove_zero_ccgt,
+)
 
 
 def prepare_electricity_features(file_paths):
