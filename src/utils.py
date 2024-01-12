@@ -33,10 +33,9 @@ def infer_gas_day(sp, elec_day, actual_datetime=None):
         gas_day = gas_day.date()
         return gas_day
 
-    try:
-        if 0 < sp <= 48:
-            pass
-    except:
+    if 0 < sp <= 48:
+        pass
+    else:
         logger.warning(
             "Settlement period needs to be between 1 and 48, it's " + str(sp)
         )
