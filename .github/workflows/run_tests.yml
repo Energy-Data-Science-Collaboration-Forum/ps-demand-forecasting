@@ -20,4 +20,3 @@ jobs:
 
     - name: Run pytest
       run: python -m pytest --junitxml=junit/unit-test.xml
-
