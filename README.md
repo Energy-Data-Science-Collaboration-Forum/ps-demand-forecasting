@@ -40,4 +40,4 @@ Interested in contributing? Check out the contributing guidelines. Please note t
 
 ## License
 
-The code in this repository is licensed under the terms of the MIT license.
+The code in this repository is licensed under the terms of the Open Government License (OGL) version 3.
