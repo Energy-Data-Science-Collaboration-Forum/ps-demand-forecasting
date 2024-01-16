@@ -1,14 +1,11 @@
-import joblib
 import logging
-from datetime import datetime as dt
+
+import joblib
 import pandas as pd
 
-from src.prepare_data import (
-    prepare_gas_demand_actuals,
-    prepare_electricity_features,
-)
-from src.train import train_glm_63, train_gam
 from src.evaluate import evaluate_models
+from src.prepare_data import prepare_electricity_features, prepare_gas_demand_actuals
+from src.train import train_gam, train_glm_63
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(format="%(asctime)s %(levelname)s: %(message)s", level=logging.INFO)
@@ -39,16 +36,11 @@ ps_gam_model, ps_gam_predictions = train_gam(ps_demand_actuals, electricity_feat
 joblib.dump(ps_gam_model, "data/ps_gam_model.joblib")
 
 all_predictions = pd.concat(
-    [
-        ps_63_cv_predictions.to_frame(),
-        ps_gam_predictions
-    ],
+    [ps_63_cv_predictions.to_frame(), ps_gam_predictions],
     axis=1,
 )
 
 model_performance = evaluate_models(all_predictions, ps_demand_actuals)
-model_performance.to_csv(
-    "data/model_performance.csv", index=False
-)
+model_performance.to_csv("data/model_performance.csv", index=False)
 
 print(model_performance)

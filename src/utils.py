@@ -1,7 +1,8 @@
+import datetime as dt
 import logging
+
 import numpy as np
 import pandas as pd
-import datetime as dt
 from pandas.api.types import is_numeric_dtype
 
 logger = logging.getLogger(__name__)
@@ -32,10 +33,9 @@ def infer_gas_day(sp, elec_day, actual_datetime=None):
         gas_day = gas_day.date()
         return gas_day
 
-    try:
-        if 0 < sp <= 48:
-            pass
-    except:
+    if 0 < sp <= 48:
+        pass
+    else:
         logger.warning(
             "Settlement period needs to be between 1 and 48, it's " + str(sp)
         )
@@ -263,8 +263,10 @@ def fix_missing_values(input_data):
     input_data = input_data.dropna()
 
     # now complete the timeseries
-    input_data = input_data.reindex(pd.date_range(input_data.index.min(), input_data.index.max()))
+    input_data = input_data.reindex(
+        pd.date_range(input_data.index.min(), input_data.index.max())
+    )
     # our best guess is yesterday's value
-    input_data = input_data.fillna(method='ffill')
+    input_data = input_data.fillna(method="ffill")
 
     return input_data

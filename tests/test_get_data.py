@@ -1,8 +1,14 @@
 import logging
+
 import pandas as pd
 from pandas.testing import assert_frame_equal
+
 import src.get_data
-from src.get_data import get_gas_actuals_from_mipi, get_mipi_data, get_elexon_data_from_api
+from src.get_data import (
+    get_elexon_data_from_api,
+    get_gas_actuals_from_mipi,
+    get_mipi_data,
+)
 
 
 def test_get_mipi_data_no_data(monkeypatch, caplog):
@@ -85,31 +91,30 @@ def test_get_gas_actuals_from_mipi(monkeypatch):
 
 
 def test_get_elexon_data_from_api(monkeypatch):
-
-    class MockResponse():
+    class MockResponse:
         status_code = 200
 
         def json(self):
-            return {"data":[{"One":1, "Two":4}]}
+            return {"data": [{"One": 1, "Two": 4}]}
 
-    class MockRequest():
+    class MockRequest:
         def get(self, url, headers):
             return MockResponse()
 
     monkeypatch.setattr(src.get_data, "requests", MockRequest())
 
     result = get_elexon_data_from_api("Any", "", "2022-11-02", "2022-11-10")
-    desired_result = pd.DataFrame({'One':[1], 'Two':[4]})
+    desired_result = pd.DataFrame({"One": [1], "Two": [4]})
     assert len(result) == 2
     assert_frame_equal(result[0], desired_result)
     assert_frame_equal(result[1], desired_result)
 
-def test_get_elexon_data_from_api_error(monkeypatch, caplog):
 
-    class MockResponse():
+def test_get_elexon_data_from_api_error(monkeypatch, caplog):
+    class MockResponse:
         status_code = 404
 
-    class MockRequest():
+    class MockRequest:
         def get(self, url, headers):
             return MockResponse()
 
@@ -118,4 +123,4 @@ def test_get_elexon_data_from_api_error(monkeypatch, caplog):
     result = get_elexon_data_from_api("Annie", "", "2022-11-02", "2022-11-10")
     assert len(result) == 0
     assert len(caplog.messages) == 1
-    assert caplog.messages[0] == 'Error retrieving Annie, status code: 404'
+    assert caplog.messages[0] == "Error retrieving Annie, status code: 404"

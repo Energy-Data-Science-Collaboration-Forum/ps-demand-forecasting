@@ -26,7 +26,7 @@ and "help wanted" is open to whoever wants to implement it.
 ### Write Documentation
 
 You can never have enough documentation! Please feel free to contribute to any
-part of the documentation, such as the official docs, docstrings, or even 
+part of the documentation, such as the official docs, docstrings, or even
 on the web in blog posts, articles, and such.
 
 ### Submit Feedback
@@ -48,10 +48,18 @@ Ready to contribute? Here's how to set up for local development.
     ```console
     $ git checkout -b name-of-your-bugfix-or-feature
     ```
+5. Run the following code to setup your python environment:
+  ```
+  conda create -f environment.yml
+  conda activate gas_demand_forecasting
+  ```
 
-4. When you're done making changes, check that your changes conform to any code formatting requirements and pass any tests.
+6. Run `pre-commit install` to ensure the git hooks are setup
 
-5. Commit your changes and open a pull request.
+7. When you're done making changes, check that your changes conform to any code formatting requirements and pass any tests.
+
+8. Commit your changes and open a pull request.
+
 
 ## Pull Request Guidelines
 
@@ -62,5 +70,5 @@ Before you submit a pull request, check that it meets these guidelines:
 
 ## Code of Conduct
 
-Please note that this project is released with a 
+Please note that this project is released with a
 Code of Conduct. By contributing to this project you agree to abide by its terms.

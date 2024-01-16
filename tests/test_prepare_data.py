@@ -1,17 +1,18 @@
 import numpy as np
 import pandas as pd
 from pandas.testing import assert_frame_equal
+
 import src.prepare_data
 from src.prepare_data import (
-    prepare_gas_demand_actuals,
-    prepare_ted_forecast,
-    prepare_wind_forecast,
-    prepare_electricity_actuals,
-    prepare_actual_sofar,
-    prepare_gen_previous_gas_day,
     aggregate_generation_data,
+    prepare_actual_sofar,
+    prepare_electricity_actuals,
+    prepare_gas_demand_actuals,
+    prepare_gen_previous_gas_day,
     prepare_hourly_wind_forecast,
+    prepare_ted_forecast,
     prepare_ted_half_hourly_forecast,
+    prepare_wind_forecast,
 )
 
 
@@ -496,7 +497,7 @@ def test_prepare_hourly_wind_forecast(monkeypatch):
     dup2["startTime"] = dup2["startTime"].dt.strftime(date_format="%Y-%m-%dT%H:%M:%SZ")
     dup2 = dup2.iloc[:-1, :]
     mock_data = mock_data.append(dup2).drop(columns="sp")
-    mock_data['dataset'] = 'dummy'
+    mock_data["dataset"] = "dummy"
 
     def mock_read_csv(fp):
         return mock_data

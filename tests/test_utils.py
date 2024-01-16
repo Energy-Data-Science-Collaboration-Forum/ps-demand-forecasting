@@ -1,15 +1,17 @@
 import datetime as dt
+
 import numpy as np
 import pandas as pd
 from pandas.testing import assert_frame_equal
+
 from src.utils import (
-    remove_incomplete_settlement_periods,
     cutoff_forecast,
-    infer_gas_day,
-    remove_zero_ccgt,
-    flatten_data,
     fill_46_settlement_period,
+    flatten_data,
+    infer_gas_day,
     remove_50_settlement_period,
+    remove_incomplete_settlement_periods,
+    remove_zero_ccgt,
 )
 
 
@@ -32,15 +34,15 @@ def test_infer_gas_day():
 
     # if negative (impossible value)
     gas_day = infer_gas_day(-1, today)
-    assert gas_day == today - dt.timedelta(days=1)
+    assert pd.isna(gas_day)
 
     # if zero settlement period
     gas_day = infer_gas_day(0, today)
-    assert gas_day == today - dt.timedelta(days=1)
+    assert pd.isna(gas_day)
 
     # date with time detail
     now = dt.datetime.now()
-    gas_day = infer_gas_day(0, now)
+    gas_day = infer_gas_day(10, now)
     assert gas_day == now - dt.timedelta(days=1)
 
 
