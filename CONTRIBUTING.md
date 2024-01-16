@@ -48,10 +48,18 @@ Ready to contribute? Here's how to set up for local development.
     ```console
     $ git checkout -b name-of-your-bugfix-or-feature
     ```
+5. Run the following code to setup your python environment:
+  ```
+  conda create -f environment.yml
+  conda activate gas_demand_forecasting
+  ```
 
-4. When you're done making changes, check that your changes conform to any code formatting requirements and pass any tests.
+6. Run `pre-commit install` to ensure the git hooks are setup
 
-5. Commit your changes and open a pull request.
+7. When you're done making changes, check that your changes conform to any code formatting requirements and pass any tests.
+
+8. Commit your changes and open a pull request.
+
 
 ## Pull Request Guidelines
 
